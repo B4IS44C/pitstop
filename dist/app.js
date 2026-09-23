@@ -18,7 +18,7 @@ function renderResult(item){
  if(crc&&valid){$('converted-total').textContent=`Equivalente: ${money(item.totalCents)}`;$('used-rate').textContent=`US$ 1 = ${money(Math.round(rate*100),'CRC')} · Tipo de cambio ingresado`;}
  $('result-product').textContent=item.product;$('result-cost').textContent=money(item.costCents);$('result-weight').textContent=`${item.weightGrams/1000} kg`;
 }
-$('new').addEventListener('click',()=>{$('product').value='';$('cost').value='';$('weight').value='';requestId=undefined;pendingPayload=undefined;clearResult();$('product').focus();});
+$('new').addEventListener('click',()=>{$('product').value='';$('cost').value='';$('weight').value='';requestId=undefined;pendingPayload=undefined;clearResult();notice('Ingresa los datos del siguiente repuesto.');$('product').focus();});
 
 $('calculator-form').addEventListener('submit',async e=>{
  e.preventDefault();const clean=id=>$(id).value.trim().replace(',','.');
