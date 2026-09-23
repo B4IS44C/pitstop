@@ -30,7 +30,7 @@ $('calculator-form').addEventListener('submit',async e=>{
  finally{$('fields').disabled=false;$('calculate').innerHTML='Calcular repuesto <span aria-hidden="true">↗</span>';}
 });
 async function start(){
- if(!firebaseConfig.apiKey||!firebaseConfig.appId||!appCheckSiteKey){notice('La calculadora está pendiente de activación por administración.');return;}
+ if(!firebaseConfig.apiKey||!firebaseConfig.appId||!appCheckSiteKey){notice('La calculadora está pendiente de activación.');return;}
  try{
   const base='https://www.gstatic.com/firebasejs/12.19.0/';
   const [app,authentication,functions,check]=await Promise.all([import(base+'firebase-app.js'),import(base+'firebase-auth.js'),import(base+'firebase-functions.js'),import(base+'firebase-app-check.js')]);
@@ -38,8 +38,9 @@ async function start(){
   check.initializeAppCheck(firebase,{provider:new check.ReCaptchaEnterpriseProvider(appCheckSiteKey),isTokenAutoRefreshEnabled:true});
   const auth=authentication.getAuth(firebase);await authentication.setPersistence(auth,authentication.browserSessionPersistence);await authentication.signInAnonymously(auth);
   const backend=functions.getFunctions(firebase,region);api=name=>functions.httpsCallable(backend,name);
-  $('fields').disabled=false;notice('Ingresa el costo en la moneda de tu elección.');
+  $('fields').disabled=false;$('calculate').disabled=false;notice('Ingresa el costo en la moneda de tu elección.');
  }catch{notice('No se pudo conectar la calculadora. Revisa tu conexión o inténtalo más tarde.',true);}
 }
 currencyChanged();start();
+
 
