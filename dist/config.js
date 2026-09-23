@@ -4,4 +4,4 @@ export const firebaseConfig = {
 };
 export const region = "us-central1";
 // Clave pública de reCAPTCHA Enterprise registrada en Firebase App Check.
-export const appCheckSiteKey = "";
+export const appCheckSiteKey = "6LeDqMotAAAAAJ_CNs1-e59S8--oW2IQP43-1n1O";
