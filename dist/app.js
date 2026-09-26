@@ -1,7 +1,30 @@
 import {firebaseConfig,region,appCheckSiteKey} from './config.js';
 const $=id=>document.getElementById(id);
 const money=(minor,currency='USD')=>new Intl.NumberFormat('es-CR',{style:'currency',currency}).format(minor/100);
-let api,requestId,pendingPayload,lastResult;
+let api,requestId,pendingPayload,lastResult,sellerDay,saleBusy=false;
+const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Costa_Rica',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+try{const saved=JSON.parse(localStorage.getItem('pitstop-seller')||'null');if(saved?.day===today()){$('seller').value=saved.name;sellerDay=saved.day;}}catch{}
+function checkSeller(){
+ if(sellerDay!==today()){$('seller').value='';clearResult();notice('Escribe el nombre del vendedor para este nuevo día.',true);$('seller').focus();return false;}
+ if($('seller').value.trim().length<2){notice('El vendedor es obligatorio. Escribe tu nombre.',true);$('seller').focus();return false;}return true;
+}
+$('seller').addEventListener('input',()=>{sellerDay=today();try{localStorage.setItem('pitstop-seller',JSON.stringify({name:$('seller').value.trim(),day:sellerDay}));}catch{}if(lastResult){clearResult();notice('Vendedor actualizado. Calcula nuevamente.');}});
+for(const id of ['product','cost','weight'])$(id).addEventListener('input',()=>{if(lastResult){clearResult();notice('Datos actualizados. Calcula nuevamente.');}});
+$('create-sale').addEventListener('click',()=>{
+ if(!checkSeller()||!lastResult)return;
+ $('sale-form').reset();$('sale-error').textContent='';$('sale-summary').textContent=`${lastResult.product} · ${money(lastResult.totalCents)} · Vendedor: ${lastResult.seller}`;$('sale-dialog').showModal();
+});
+$('cancel-sale').addEventListener('click',()=>{$('sale-dialog').close();});
+$('sale-dialog').addEventListener('cancel',e=>{if(saleBusy)e.preventDefault();});
+$('sale-form').addEventListener('submit',async e=>{
+ e.preventDefault();if(saleBusy||!lastResult||!checkSeller())return;
+ const snapshot=lastResult,customer={phone:$('customer-phone').value.trim(),name:$('customer-name').value.trim(),address:$('customer-address').value.trim(),link:$('customer-link').value.trim()};
+ if(!/^\+?\d{8,15}$/.test(customer.phone.replace(/[\s().-]/g,''))){$('sale-error').textContent='Ingresa un teléfono de 8 a 15 dígitos, con código de país si corresponde.';return;}
+ saleBusy=true;$('sale-fields').disabled=true;$('save-sale').textContent='Guardando…';$('sale-error').textContent='';
+ try{await api('createSale')({calculationId:snapshot.calculationId,seller:$('seller').value.trim(),sellerDay,customer});$('sale-dialog').close();$('create-sale').disabled=true;$('sale-status').textContent='Venta registrada correctamente.';notice('Venta creada. Puedes iniciar un nuevo cálculo.');}
+ catch(error){$('sale-error').textContent=error.code==='functions/already-exists'?'Este cálculo ya tiene una venta registrada.':error.code==='functions/failed-precondition'?'Debes realizar un nuevo cálculo con el vendedor de hoy.':'No se confirmó el guardado. Revisa los datos e intenta nuevamente; no se duplicará la venta.';}
+ finally{saleBusy=false;$('sale-fields').disabled=false;$('save-sale').textContent='Guardar venta';}
+});
 try{$('exchange-rate').value=localStorage.getItem('pitstop-exchange-rate')||'';}catch{}
 $('exchange-rate').addEventListener('input',()=>{
  try{localStorage.setItem('pitstop-exchange-rate',$('exchange-rate').value);}catch{}
@@ -9,7 +32,7 @@ $('exchange-rate').addEventListener('input',()=>{
 });
 $('shipping-origin').addEventListener('change',()=>{if(lastResult){clearResult();notice('Origen actualizado. Pulsa Calcular repuesto para actualizar tu cotización.');}});
 function notice(message,error=false){$('notice').textContent=message;$('notice').classList.toggle('error',error);}
-function clearResult(){lastResult=undefined;$('result-data').hidden=true;$('result-empty').hidden=false;}
+function clearResult(){lastResult=undefined;$('sale-status').textContent='';$('create-sale').disabled=false;$('result-data').hidden=true;$('result-empty').hidden=false;}
 function currencyChanged(){if(lastResult)renderResult(lastResult);}
 $('currency').addEventListener('change',currencyChanged);
 function renderResult(item){
@@ -25,16 +48,16 @@ function renderResult(item){
 $('new').addEventListener('click',()=>{$('product').value='';$('cost').value='';$('weight').value='';requestId=undefined;pendingPayload=undefined;clearResult();notice('Ingresa los datos del siguiente repuesto.');$('product').focus();});
 
 $('calculator-form').addEventListener('submit',async e=>{
- e.preventDefault();const clean=id=>$(id).value.trim().replace(',','.');
+ e.preventDefault();if(!checkSeller())return;const clean=id=>$(id).value.trim().replace(',','.');
  const product=$('product').value.trim(),cost=clean('cost'),weight=clean('weight'),exchangeRate=clean('exchange-rate'),shippingOrigin=$('shipping-origin').value;
  if(product.length<3||!/^\d{1,9}(\.\d{1,2})?$/.test(cost)||Number(cost)<=0||!/^\d{1,4}(\.\d{1,3})?$/.test(weight)||Number(weight)<=0||Number(weight)>1000){notice('Revisa el nombre (mínimo 3 caracteres), el costo positivo (2 decimales) y el peso (hasta 1.000 kg, con 3 decimales).',true);return;}
  if(!/^\d{1,5}(\.\d{1,2})?$/.test(exchangeRate)||Number(exchangeRate)<1||Number(exchangeRate)>10000){notice('Ingresa un tipo de cambio entre ₡1 y ₡10.000 por dólar, con hasta 2 decimales.',true);$('exchange-rate').focus();return;}
- const payload=JSON.stringify({product,cost,weight,currency:'USD',exchangeRate,shippingOrigin});
+ const payload=JSON.stringify({product,cost,weight,currency:'USD',exchangeRate,shippingOrigin,seller:$('seller').value.trim(),sellerDay});
  if(payload!==pendingPayload){requestId=crypto.randomUUID();pendingPayload=payload;}
- $('fields').disabled=true;$('exchange-rate').disabled=true;$('new').disabled=true;$('calculate').textContent='Calculando…';clearResult();
+ $('seller').disabled=true;$('fields').disabled=true;$('exchange-rate').disabled=true;$('new').disabled=true;$('calculate').textContent='Calculando…';clearResult();
  try{const {data}=await api('calculate')({...JSON.parse(payload),requestId});renderResult(data);notice('Tu cotización está lista.');requestId=undefined;pendingPayload=undefined;}
  catch(error){const messages={'functions/resource-exhausted':'Espera unos segundos antes de realizar otro cálculo.','functions/invalid-argument':'Revisa el costo en dólares y el peso. El costo debe ser de al menos US$ 0,01 y no superar US$ 999.999,99.','functions/unauthenticated':'No se pudo validar la sesión. Recarga la página.'};notice(messages[error.code]||'No se pudo completar el cálculo. Revisa tu conexión e intenta de nuevo.',true);}
- finally{$('fields').disabled=false;$('exchange-rate').disabled=false;$('new').disabled=false;$('calculate').innerHTML='Calcular repuesto <span aria-hidden="true">↗</span>';}
+ finally{$('seller').disabled=false;$('fields').disabled=false;$('exchange-rate').disabled=false;$('new').disabled=false;$('calculate').innerHTML='Calcular repuesto <span aria-hidden="true">↗</span>';}
 });
 async function start(){
  if(!firebaseConfig.apiKey||!firebaseConfig.appId||!appCheckSiteKey){notice('La calculadora está pendiente de activación.');return;}
