@@ -1,3 +1,4 @@
+import {receiptFile} from './receipt-file.js';
 import {firebaseConfig,region,appCheckSiteKey} from './config.js';
 const $=id=>document.getElementById(id);
 const money=(minor,currency='USD')=>new Intl.NumberFormat('es-CR',{style:'currency',currency}).format(minor/100);
@@ -18,11 +19,11 @@ $('cancel-sale').addEventListener('click',()=>{$('sale-dialog').close();});
 $('sale-dialog').addEventListener('cancel',e=>{if(saleBusy)e.preventDefault();});
 $('sale-form').addEventListener('submit',async e=>{
  e.preventDefault();if(saleBusy||!lastResult||!checkSeller())return;
- const snapshot=lastResult,customer={phone:$('customer-phone').value.trim(),name:$('customer-name').value.trim(),address:$('customer-address').value.trim(),link:$('customer-link').value.trim()};
+ const snapshot=lastResult,customer={phone:$('customer-phone').value.trim(),name:$('customer-name').value.trim(),address:$('customer-address').value.trim()};
  if(!/^\+?\d{8,15}$/.test(customer.phone.replace(/[\s().-]/g,''))){$('sale-error').textContent='Ingresa un teléfono de 8 a 15 dígitos, con código de país si corresponde.';return;}
  saleBusy=true;$('sale-fields').disabled=true;$('save-sale').textContent='Guardando…';$('sale-error').textContent='';
- try{await api('createSale')({calculationId:snapshot.calculationId,seller:$('seller').value.trim(),sellerDay,customer});$('sale-dialog').close();$('create-sale').disabled=true;$('sale-status').textContent='Venta registrada correctamente.';notice('Venta creada. Puedes iniciar un nuevo cálculo.');}
- catch(error){$('sale-error').textContent=error.code==='functions/already-exists'?'Este cálculo ya tiene una venta registrada.':error.code==='functions/failed-precondition'?'Debes realizar un nuevo cálculo con el vendedor de hoy.':'No se confirmó el guardado. Revisa los datos e intenta nuevamente; no se duplicará la venta.';}
+ try{const receipt=await receiptFile($('payment-receipt').files[0]);await api('createSale')({calculationId:snapshot.calculationId,seller:$('seller').value.trim(),sellerDay,customer,receipt});$('sale-dialog').close();resetCalculation();$('sale-form').reset();notice('Venta creada. Puedes iniciar un nuevo cálculo.');$('sale-success').showModal();}
+ catch(error){$('sale-error').textContent=!error.code?error.message:error.code==='functions/already-exists'?'Este cálculo ya tiene una venta registrada.':error.code==='functions/failed-precondition'?'Debes realizar un nuevo cálculo con el vendedor de hoy.':'No se confirmó el guardado. Revisa los datos e intenta nuevamente; no se duplicará la venta.';}
  finally{saleBusy=false;$('sale-fields').disabled=false;$('save-sale').textContent='Guardar venta';}
 });
 try{$('exchange-rate').value=localStorage.getItem('pitstop-exchange-rate')||'';}catch{}
@@ -45,7 +46,9 @@ function renderResult(item){
  if(crc&&valid){$('converted-total').textContent=`Equivalente: ${money(item.totalCents)}`;$('used-rate').textContent=`US$ 1 = ${money(rate,'CRC')} · Tipo de cambio ingresado`;}
  $('result-origin').textContent=item.shippingOrigin==='COLOMBIA'?'Colombia':'USA';$('result-product').textContent=item.product;$('result-cost').textContent=money(item.costCents);$('result-weight').textContent=`${item.weightGrams/1000} kg`;
 }
-$('new').addEventListener('click',()=>{$('product').value='';$('cost').value='';$('weight').value='';requestId=undefined;pendingPayload=undefined;clearResult();notice('Ingresa los datos del siguiente repuesto.');$('product').focus();});
+function resetCalculation(){$('product').value='';$('cost').value='';$('weight').value='';requestId=undefined;pendingPayload=undefined;clearResult();}
+$('new').addEventListener('click',()=>{resetCalculation();notice('Ingresa los datos del siguiente repuesto.');$('product').focus();});
+$('sale-success-ok').addEventListener('click',()=>{$('sale-success').close();$('product').focus();});
 
 $('calculator-form').addEventListener('submit',async e=>{
  e.preventDefault();if(!checkSeller())return;const clean=id=>$(id).value.trim().replace(',','.');

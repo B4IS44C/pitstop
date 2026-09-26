@@ -5,8 +5,8 @@
   <meta name="description" content="Calculadora privada de repuestos PitStop."><meta name="robots" content="noindex,nofollow">
   <title>PitStop | Calculadora de repuestos</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='8' fill='%23e20a18'/%3E%3Ctext x='10' y='29' font-family='Arial' font-size='28' font-weight='900' fill='white'%3EP%3C/text%3E%3C/svg%3E">
-  <link rel="stylesheet" href="./styles.css?v=20260925-sales1">
-  <link rel="stylesheet" href="./currency.css?v=20260925-sales1">
+  <link rel="stylesheet" href="./styles.css?v=20260926-receipts1">
+  <link rel="stylesheet" href="./currency.css?v=20260926-receipts1">
 </head>
 <body>
  <header class="header"><div class="header-inner"><a href="./" aria-label="PitStop inicio" class="brand"><img src="./assets/logo.jpeg" alt="PitStop Repuestos" width="112" height="112"><span>HERRAMIENTAS<br><strong>DE COTIZACIÓN</strong></span></a><span class="private">CALCULADORA DE REPUESTOS</span></div></header>
@@ -22,8 +22,9 @@
   </div>
   <footer><span>PITSTOP <strong>REPUESTOS</strong></span><span>Calidad que te mueve.</span></footer>
  </main>
- <dialog id="sale-dialog" aria-labelledby="sale-title"><form id="sale-form"><h2 id="sale-title">Crear venta</h2><p id="sale-summary"></p><fieldset id="sale-fields"><div class="field"><label for="customer-phone">Teléfono del cliente *</label><input id="customer-phone" type="tel" required maxlength="25" placeholder="Ej. +506 8888 8888" autocomplete="tel"></div><div class="field"><label for="customer-name">Nombre del cliente <span class="optional">(opcional)</span></label><input id="customer-name" maxlength="120" autocomplete="name"></div><div class="field"><label for="customer-address">Dirección de entrega *</label><textarea id="customer-address" required maxlength="1000" rows="3" autocomplete="street-address"></textarea></div><div class="field"><label for="customer-link">Enlace de ubicación <span class="optional">(opcional)</span></label><input id="customer-link" type="url" maxlength="2000" placeholder="https://..."></div><p id="sale-error" role="alert"></p><div class="sale-actions"><button type="button" id="cancel-sale">Cancelar</button><button type="submit" id="save-sale" class="button">Guardar venta</button></div></fieldset></form></dialog>
- <noscript>Activa JavaScript para utilizar la calculadora.</noscript><script type="module" src="./app.js?v=20260925-sales1"></script>
+ <dialog id="sale-dialog" aria-labelledby="sale-title"><form id="sale-form"><h2 id="sale-title">Información de venta</h2><p id="sale-summary"></p><fieldset id="sale-fields"><div class="field"><label for="customer-phone">Teléfono del cliente *</label><input id="customer-phone" type="tel" required maxlength="25" placeholder="Ej. +506 8888 8888" autocomplete="tel"></div><div class="field"><label for="customer-name">Nombre del cliente <span class="optional">(opcional)</span></label><input id="customer-name" maxlength="120" autocomplete="name"></div><div class="field"><label for="customer-address">Dirección de entrega *</label><textarea id="customer-address" required maxlength="1000" rows="3" autocomplete="street-address"></textarea></div><div class="field"><label for="payment-receipt">Comprobante de pago <span class="optional">(opcional)</span></label><input id="payment-receipt" type="file" accept="image/jpeg,image/png,image/webp"><span class="hint">Adjunta una imagen JPG, PNG o WEBP de hasta 4 MB.</span></div><p id="sale-error" role="alert"></p><div class="sale-actions"><button type="button" id="cancel-sale">Cancelar</button><button type="submit" id="save-sale" class="button">Guardar venta</button></div></fieldset></form></dialog>
+<dialog id="sale-success" aria-labelledby="sale-success-title"><h2 id="sale-success-title">Venta creada</h2><p>La información de la venta se guardó correctamente.</p><button type="button" id="sale-success-ok" class="button">Hacer nuevo cálculo</button></dialog>
+ <noscript>Activa JavaScript para utilizar la calculadora.</noscript><script type="module" src="./app.js?v=20260926-receipts1"></script>
 </body></html>
 
 
