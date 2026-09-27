@@ -40,11 +40,11 @@ function renderResult(item){
  lastResult=item;$('discount').value=String(item.discountPercent??0);
  $('result-empty').hidden=true;$('result-data').hidden=false;
  const crc=$('currency').value==='CRC',valid=!!item.exchangeRateCents,rate=item.exchangeRateCents;
- const discount=item.discountPercent??0;$('discount-summary').hidden=!discount;$('discount-summary').textContent=discount?`Antes: ${money(crc?Math.round(item.totalBeforeDiscountCents*rate/100):item.totalBeforeDiscountCents,crc?'CRC':'USD')} · Descuento aplicado: ${discount}%`:'';
- $('total').textContent=crc?(valid?money(Math.round(item.totalCents*rate/100),'CRC'):'—'):money(item.totalCents);
- $('total-caption').textContent=crc?(valid?'Colones costarricenses · CRC':'Conversión no disponible. Selecciona dólares o intenta de nuevo en unos momentos.'):'Dólares estadounidenses · USD';
+ const discount=item.discountPercent??0;$('discount-summary').hidden=!discount;$('discount-summary').textContent=discount?`Antes: ${money(crc?(item.crcRoundingUnit===1000?Math.ceil(item.totalBeforeDiscountCents*rate/10000000)*100000:Math.round(item.totalBeforeDiscountCents*rate/100)):item.totalBeforeDiscountCents,crc?'CRC':'USD')} · Descuento aplicado: ${discount}%`:'';
+ $('total').textContent=crc?(valid?money(item.totalCrcMinor,'CRC'):'—'):money(item.totalCents);
+ $('total-caption').textContent=crc?(valid?(item.crcRoundingUnit===1000?'Colones · Redondeado hacia arriba a ₡1.000':'Colones costarricenses · CRC'):'Conversión no disponible. Selecciona dólares o intenta de nuevo en unos momentos.'):'Dólares estadounidenses · USD';
  $('conversion').hidden=!crc||!valid;
- if(crc&&valid){$('converted-total').textContent=`Equivalente: ${money(item.totalCents)}`;$('used-rate').textContent=`US$ 1 = ${money(rate,'CRC')} · Tipo de cambio ingresado`;}
+ if(crc&&valid){$('converted-total').textContent=`Total en dólares: ${money(item.totalCents)}`;$('used-rate').textContent=`US$ 1 = ${money(rate,'CRC')} · Tipo de cambio ingresado`;}
  $('result-origin').textContent=item.shippingOrigin==='COLOMBIA'?'Colombia':'USA';$('result-product').textContent=item.product;$('result-cost').textContent=money(item.costCents);$('result-weight').textContent=`${item.weightGrams/1000} kg`;
 }
 function resetCalculation(){$('quote-phone').value='';$('product-url').value='';$('product').value='';$('cost').value='';$('weight').value='';requestId=undefined;pendingPayload=undefined;clearResult();}
