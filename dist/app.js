@@ -22,8 +22,8 @@ $('sale-form').addEventListener('submit',async e=>{
  const snapshot=lastResult,customer={phone:$('customer-phone').value.trim(),name:$('customer-name').value.trim(),address:$('customer-address').value.trim()};
  if(!/^\+?\d{8,15}$/.test(customer.phone.replace(/[\s().-]/g,''))){$('sale-error').textContent='Ingresa un teléfono de 8 a 15 dígitos, con código de país si corresponde.';return;}
  saleBusy=true;$('sale-fields').disabled=true;$('save-sale').textContent='Guardando…';$('sale-error').textContent='';
- try{const receipt=await receiptFile($('payment-receipt').files[0]);await api('createSale')({calculationId:snapshot.calculationId,seller:$('seller').value.trim(),sellerDay,customer,receipt});$('sale-dialog').close();removeSearchQuote(snapshot.calculationId);resetCalculation();$('sale-form').reset();notice('Venta creada. Puedes iniciar un nuevo cálculo.');$('sale-success').showModal();}
- catch(error){$('sale-error').textContent=!error.code?error.message:error.code==='functions/already-exists'?'Este cálculo ya tiene una venta registrada.':error.code==='functions/failed-precondition'?'Debes realizar un nuevo cálculo con el vendedor de hoy.':'No se confirmó el guardado. Revisa los datos e intenta nuevamente; no se duplicará la venta.';}
+ try{const receipt=await receiptFile($('payment-receipt').files[0]);await api('createSale')({calculationId:snapshot.calculationId,quoteVersion:snapshot.quoteVersion??0,seller:$('seller').value.trim(),sellerDay,customer,receipt});$('sale-dialog').close();removeSearchQuote(snapshot.calculationId);resetCalculation();$('sale-form').reset();notice('Venta creada. Puedes iniciar un nuevo cálculo.');$('sale-success').showModal();}
+ catch(error){$('sale-error').textContent=!error.code?error.message:error.code==='functions/already-exists'?'Este cálculo ya tiene una venta registrada.':error.code==='functions/failed-precondition'?'Recupera la cotización nuevamente: su descuento o estado pudo cambiar.':'No se confirmó el guardado. Revisa los datos e intenta nuevamente; no se duplicará la venta.';}
  finally{saleBusy=false;$('sale-fields').disabled=false;$('save-sale').textContent='Guardar venta';}
 });
 try{$('exchange-rate').value=localStorage.getItem('pitstop-exchange-rate')||'';}catch{}
@@ -37,9 +37,10 @@ function clearResult(){lastResult=undefined;$('sale-status').textContent='';$('c
 function currencyChanged(){if(lastResult)renderResult(lastResult);}
 $('currency').addEventListener('change',currencyChanged);
 function renderResult(item){
- lastResult=item;
+ lastResult=item;$('discount').value=String(item.discountPercent??0);
  $('result-empty').hidden=true;$('result-data').hidden=false;
  const crc=$('currency').value==='CRC',valid=!!item.exchangeRateCents,rate=item.exchangeRateCents;
+ const discount=item.discountPercent??0;$('discount-summary').hidden=!discount;$('discount-summary').textContent=discount?`Antes: ${money(crc?Math.round(item.totalBeforeDiscountCents*rate/100):item.totalBeforeDiscountCents,crc?'CRC':'USD')} · Descuento aplicado: ${discount}%`:'';
  $('total').textContent=crc?(valid?money(Math.round(item.totalCents*rate/100),'CRC'):'—'):money(item.totalCents);
  $('total-caption').textContent=crc?(valid?'Colones costarricenses · CRC':'Conversión no disponible. Selecciona dólares o intenta de nuevo en unos momentos.'):'Dólares estadounidenses · USD';
  $('conversion').hidden=!crc||!valid;
@@ -47,6 +48,15 @@ function renderResult(item){
  $('result-origin').textContent=item.shippingOrigin==='COLOMBIA'?'Colombia':'USA';$('result-product').textContent=item.product;$('result-cost').textContent=money(item.costCents);$('result-weight').textContent=`${item.weightGrams/1000} kg`;
 }
 function resetCalculation(){$('quote-phone').value='';$('product-url').value='';$('product').value='';$('cost').value='';$('weight').value='';requestId=undefined;pendingPayload=undefined;clearResult();}
+$('discount').addEventListener('change',async()=>{
+ if(!lastResult||quoteBusy||saleBusy)return;
+ if(!checkSeller())return;
+ const snapshot=lastResult,discountPercent=Number($('discount').value);
+ quoteBusy=true;for(const id of ['discount','seller','fields','exchange-rate','new','create-sale'])$(id).disabled=true;renderSearch();notice('Aplicando descuento…');
+ try{const {data}=await api('setQuoteDiscount')({calculationId:snapshot.calculationId,customerPhone:snapshot.customerPhone,quoteVersion:snapshot.quoteVersion??0,discountPercent,seller:$('seller').value.trim(),sellerDay});renderResult(data);searchRows=searchRows.map(row=>row.calculationId===data.calculationId?{...row,...data}:row);notice(discountPercent?`Descuento del ${discountPercent}% aplicado.`:'Cotización sin descuento.');}
+ catch(error){clearResult();notice(error.code==='functions/failed-precondition'?'Esta cotización ya tiene una venta.':error.code==='functions/aborted'?'La cotización cambió. Búscala y recupérala nuevamente.':'No se confirmó el descuento. Busca y recupera la cotización antes de continuar.',true);}
+ finally{quoteBusy=false;for(const id of ['discount','seller','fields','exchange-rate','new','create-sale'])$(id).disabled=false;renderSearch();}
+});
 $('new').addEventListener('click',()=>{resetCalculation();notice('Ingresa los datos del siguiente repuesto.');$('product').focus();});
 $('sale-success-ok').addEventListener('click',()=>{$('sale-success').close();$('product').focus();});
 
