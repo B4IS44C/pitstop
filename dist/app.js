@@ -1,3 +1,4 @@
+import {costaRicaPhone,whatsappQuotation} from './whatsapp.js';
 import {receiptFile} from './receipt-file.js';
 import {firebaseConfig,region,appCheckSiteKey} from './config.js';
 const $=id=>document.getElementById(id);
@@ -11,6 +12,12 @@ function checkSeller(){
 }
 $('seller').addEventListener('input',()=>{sellerDay=today();try{localStorage.setItem('pitstop-seller',JSON.stringify({name:$('seller').value.trim(),day:sellerDay}));}catch{}if(lastResult){clearResult();notice('Vendedor actualizado. Calcula nuevamente.');}});
 for(const id of ['product','cost','weight','quote-phone','product-url'])$(id).addEventListener('input',()=>{if(lastResult){clearResult();notice('Datos actualizados. Calcula nuevamente.');}});
+$('quote-phone').addEventListener('blur',()=>{try{$('quote-phone').value='+'+costaRicaPhone($('quote-phone').value);}catch{}});
+$('send-whatsapp').addEventListener('click',()=>{
+ if(!lastResult||quoteBusy||saleBusy||!checkSeller())return;
+ try{const quote=whatsappQuotation(lastResult);window.open(quote.url,'_blank','noopener,noreferrer');$('whatsapp-status').textContent='Mensaje preparado para +'+quote.phone+'. Pulsa Enviar en WhatsApp.';}
+ catch(error){$('whatsapp-status').textContent=error.message;}
+});
 $('create-sale').addEventListener('click',()=>{
  if(!checkSeller()||!lastResult)return;
  $('sale-form').reset();$('customer-phone').value=lastResult.customerPhone||$('quote-phone').value;$('sale-error').textContent='';$('sale-summary').textContent=`${lastResult.product} · ${money(lastResult.totalCents)} · Vendedor: ${lastResult.seller}`;$('sale-dialog').showModal();
@@ -37,7 +44,7 @@ function clearResult(){lastResult=undefined;$('sale-status').textContent='';$('c
 function currencyChanged(){if(lastResult)renderResult(lastResult);}
 $('currency').addEventListener('change',currencyChanged);
 function renderResult(item){
- lastResult=item;$('discount').value=String(item.discountPercent??0);
+ lastResult=item;$('whatsapp-status').textContent='Abre el mensaje listo para enviar.';$('discount').value=String(item.discountPercent??0);
  $('result-empty').hidden=true;$('result-data').hidden=false;
  const crc=$('currency').value==='CRC',valid=!!item.exchangeRateCents,rate=item.exchangeRateCents;
  const discount=item.discountPercent??0;$('discount-summary').hidden=!discount;$('discount-summary').textContent=discount?`Antes: ${money(crc?(item.crcRoundingUnit===1000?Math.ceil(item.totalBeforeDiscountCents*rate/10000000)*100000:Math.round(item.totalBeforeDiscountCents*rate/100)):item.totalBeforeDiscountCents,crc?'CRC':'USD')} · Descuento aplicado: ${discount}%`:'';
@@ -52,10 +59,10 @@ $('discount').addEventListener('change',async()=>{
  if(!lastResult||quoteBusy||saleBusy)return;
  if(!checkSeller())return;
  const snapshot=lastResult,discountPercent=Number($('discount').value);
- quoteBusy=true;for(const id of ['discount','seller','fields','exchange-rate','new','create-sale'])$(id).disabled=true;renderSearch();notice('Aplicando descuento…');
+ quoteBusy=true;for(const id of ['discount','seller','fields','exchange-rate','new','create-sale','send-whatsapp'])$(id).disabled=true;renderSearch();notice('Aplicando descuento…');
  try{const {data}=await api('setQuoteDiscount')({calculationId:snapshot.calculationId,customerPhone:snapshot.customerPhone,quoteVersion:snapshot.quoteVersion??0,discountPercent,seller:$('seller').value.trim(),sellerDay});renderResult(data);searchRows=searchRows.map(row=>row.calculationId===data.calculationId?{...row,...data}:row);notice(discountPercent?`Descuento del ${discountPercent}% aplicado.`:'Cotización sin descuento.');}
  catch(error){clearResult();notice(error.code==='functions/failed-precondition'?'Esta cotización ya tiene una venta.':error.code==='functions/aborted'?'La cotización cambió. Búscala y recupérala nuevamente.':'No se confirmó el descuento. Busca y recupera la cotización antes de continuar.',true);}
- finally{quoteBusy=false;for(const id of ['discount','seller','fields','exchange-rate','new','create-sale'])$(id).disabled=false;renderSearch();}
+ finally{quoteBusy=false;for(const id of ['discount','seller','fields','exchange-rate','new','create-sale','send-whatsapp'])$(id).disabled=false;renderSearch();}
 });
 $('new').addEventListener('click',()=>{resetCalculation();notice('Ingresa los datos del siguiente repuesto.');$('product').focus();});
 $('sale-success-ok').addEventListener('click',()=>{$('sale-success').close();$('product').focus();});

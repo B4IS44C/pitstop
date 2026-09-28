@@ -4,3 +4,5 @@
 .quote-search{margin-top:28px;padding:28px}.quote-search>p,.quote-card p{color:#5b616c}.search-controls{display:flex;align-items:end;gap:16px}.search-controls .field{flex:1;margin:0}.search-controls input,#quote-phone,#product-url{width:100%}.search-controls button{width:auto;min-height:52px}.quote-card{padding:20px 0;border-top:1px solid #e2e4e9}.quote-card h3{overflow-wrap:anywhere}.quote-card button{max-width:280px}@media(max-width:600px){.search-controls{display:block}.search-controls button{width:100%;margin-top:12px}.quote-search{padding:20px}}
 
 .discount-field{margin:20px 0 24px}.discount-field label{display:block;margin-bottom:8px}.discount-field select{width:100%;padding:12px;border-radius:8px;background:#22252a;color:#fff;border:1px solid #626770}.discount-field .hint{color:#d1d4db;margin-top:10px}
+
+.whatsapp-button{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:12px 14px;border:1px solid #3b8060;border-radius:6px;background:transparent;color:#a9e0bf;font-size:13px;font-weight:500}.whatsapp-button:hover:not(:disabled){background:#1d3428;border-color:#6bb688}#whatsapp-status{color:#adb7b1;margin:7px 0 17px}
