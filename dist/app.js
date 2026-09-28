@@ -1,4 +1,4 @@
-import {costaRicaPhone,whatsappQuotation} from './whatsapp.js?v=20260927-deposit-rounding';
+import {costaRicaPhone,whatsappQuotation} from './whatsapp.js?v=20260927-copy-message2';
 import {copyMessage} from './clipboard.js';
 import {receiptFile} from './receipt-file.js';
 import {firebaseConfig,region,appCheckSiteKey} from './config.js';
