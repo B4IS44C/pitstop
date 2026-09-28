@@ -1,4 +1,4 @@
-import {costaRicaPhone,whatsappQuotation} from './whatsapp.js';
+import {costaRicaPhone,whatsappQuotation} from './whatsapp.js?v=20260927-deposit-rounding';
 import {receiptFile} from './receipt-file.js';
 import {firebaseConfig,region,appCheckSiteKey} from './config.js';
 const $=id=>document.getElementById(id);
