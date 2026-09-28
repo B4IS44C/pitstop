@@ -1,4 +1,5 @@
 import {costaRicaPhone,whatsappQuotation} from './whatsapp.js?v=20260927-deposit-rounding';
+import {copyMessage} from './clipboard.js';
 import {receiptFile} from './receipt-file.js';
 import {firebaseConfig,region,appCheckSiteKey} from './config.js';
 const $=id=>document.getElementById(id);
@@ -13,10 +14,14 @@ function checkSeller(){
 $('seller').addEventListener('input',()=>{sellerDay=today();try{localStorage.setItem('pitstop-seller',JSON.stringify({name:$('seller').value.trim(),day:sellerDay}));}catch{}if(lastResult){clearResult();notice('Vendedor actualizado. Calcula nuevamente.');}});
 for(const id of ['product','cost','weight','quote-phone','product-url'])$(id).addEventListener('input',()=>{if(lastResult){clearResult();notice('Datos actualizados. Calcula nuevamente.');}});
 $('quote-phone').addEventListener('blur',()=>{try{$('quote-phone').value='+'+costaRicaPhone($('quote-phone').value);}catch{}});
-$('send-whatsapp').addEventListener('click',()=>{
- if(!lastResult||quoteBusy||saleBusy||!checkSeller())return;
- try{const quote=whatsappQuotation(lastResult);window.open(quote.url,'_blank','noopener,noreferrer');$('whatsapp-status').textContent='Mensaje preparado para +'+quote.phone+'. Pulsa Enviar en WhatsApp.';}
- catch(error){$('whatsapp-status').textContent=error.message;}
+let copyBusy=false;
+$('send-whatsapp').addEventListener('click',async()=>{
+ if(!lastResult||quoteBusy||saleBusy||copyBusy||!checkSeller())return;
+ let message;try{message=whatsappQuotation(lastResult).message;}catch(error){$('whatsapp-status').textContent=error.message;return;}
+ const snapshot=lastResult;copyBusy=true;$('send-whatsapp').disabled=true;$('copy-message').hidden=true;
+ try{await copyMessage(message);if(lastResult===snapshot)$('whatsapp-status').textContent='Mensaje copiado. Ya puedes pegarlo en WhatsApp.';}
+ catch{if(lastResult===snapshot){$('copy-message').value=message;$('copy-message').hidden=false;$('copy-message').focus();$('copy-message').select();$('whatsapp-status').textContent='El navegador no permitió copiar. Copia el texto seleccionado con Ctrl+C o mantén presionado y elige Copiar.';}}
+ finally{copyBusy=false;$('send-whatsapp').disabled=quoteBusy;}
 });
 $('create-sale').addEventListener('click',()=>{
  if(!checkSeller()||!lastResult)return;
@@ -44,7 +49,7 @@ function clearResult(){lastResult=undefined;$('sale-status').textContent='';$('c
 function currencyChanged(){if(lastResult)renderResult(lastResult);}
 $('currency').addEventListener('change',currencyChanged);
 function renderResult(item){
- lastResult=item;$('whatsapp-status').textContent='Abre el mensaje listo para enviar.';$('discount').value=String(item.discountPercent??0);
+ lastResult=item;$('copy-message').hidden=true;$('copy-message').value='';$('whatsapp-status').textContent='Copia el texto para pegarlo en WhatsApp.';$('discount').value=String(item.discountPercent??0);
  $('result-empty').hidden=true;$('result-data').hidden=false;
  const crc=$('currency').value==='CRC',valid=!!item.exchangeRateCents,rate=item.exchangeRateCents;
  const discount=item.discountPercent??0;$('discount-summary').hidden=!discount;$('discount-summary').textContent=discount?`Antes: ${money(crc?(item.crcRoundingUnit===1000?Math.ceil(item.totalBeforeDiscountCents*rate/10000000)*100000:Math.round(item.totalBeforeDiscountCents*rate/100)):item.totalBeforeDiscountCents,crc?'CRC':'USD')} · Descuento aplicado: ${discount}%`:'';
