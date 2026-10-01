@@ -1,4 +1,3 @@
-import {setupVehicle} from './vehicle.js?v=20261001-vehicle1';
 import {costaRicaPhone,whatsappQuotation} from './whatsapp.js?v=20260927-copy-message2';
 import {copyMessage} from './clipboard.js';
 import {receiptFile} from './receipt-file.js';
@@ -119,5 +118,3 @@ async function searchQuotes(reset=true){
 }
 $('quote-search-form').addEventListener('submit',e=>{e.preventDefault();searchQuotes();});$('search-more').addEventListener('click',()=>searchQuotes(false));
 currencyChanged();start();
-
-setupVehicle({getApi:()=>api,checkSeller,sellerInfo:()=>({seller:$('seller').value.trim(),sellerDay})});
