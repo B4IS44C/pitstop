@@ -6,7 +6,7 @@ export async function quotationImage(q){
  const font=(size=28,bold=false)=>{ctx.font=`${bold?'700':'400'} ${size}px Arial, sans-serif`;};
  function wrap(text,width,size=28){font(size);const lines=[];let line='';for(const word of String(text).replace(/\s+/g,' ').trim().split(' ')){for(const char of (line?' ':'')+word){if(ctx.measureText(line+char).width>width){lines.push(line.trim());line='';}line+=char;}}if(line)lines.push(line.trim());return lines;}
  const product=wrap(q.product,700),rowHeight=Math.max(105,product.length*38+48);
- canvas.height=1580+rowHeight;
+ canvas.height=1700+rowHeight;
  const rect=(x,y,w,h,color)=>{ctx.fillStyle=color;ctx.fillRect(x,y,w,h);};
  const text=(value,x,y,size=28,color='#202126',bold=false,align='left')=>{font(size,bold);ctx.fillStyle=color;ctx.textAlign=align;ctx.fillText(value,x,y);};
  rect(0,0,1200,canvas.height,'#ffffff');rect(0,0,1200,290,'#090a0c');rect(0,290,1200,12,'#e20a18');
@@ -29,8 +29,8 @@ export async function quotationImage(q){
  for(const [label,amount] of rows){rect(70,y,1060,66,label.startsWith('Adelanto')?'#fff0f1':'#f4f5f7');text(label,94,y+43,27,'#202126',true);text(crc(amount),1106,y+43,30,'#202126',true,'right');y+=70;}
  y+=40;text('Con el adelanto procedemos a encargar tu repuesto.',70,y,26);
  text('El saldo se cancela al momento de la entrega personal.',70,y+40,26);y+=108;
- text('LLEGADA ESTIMADA',70,y,20,'#dd1222',true);text(q.arrival,70,y+40,30,'#202126',true);
- text('GARANTÍA',680,y,20,'#dd1222',true);text(q.warranty,680,y+40,30,'#202126',true);
+ text('LLEGADA ESTIMADA',70,y,20,'#dd1222',true);wrap(q.arrival,510,28).forEach((line,i)=>text(line,70,y+40+i*34,28,'#202126',true));
+ text('GARANTÍA',680,y,20,'#dd1222',true);wrap(q.warranty,450,28).forEach((line,i)=>text(line,680,y+40+i*34,28,'#202126',true));
  rect(70,canvas.height-100,1060,2,'#e8e9ec');text('Gracias por la confianza.',70,canvas.height-48,26,'#5f626b');text('CALIDAD QUE TE MUEVE',1130,canvas.height-48,21,'#dd1222',true,'right');
  return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('No se pudo crear la imagen.')),'image/png'));
 }

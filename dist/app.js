@@ -1,4 +1,4 @@
-import {quotationImage} from './quotation-image.js?v=20261002';
+import {quotationImage} from './quotation-image.js?v=20261002b';
 import {costaRicaPhone,whatsappQuotation} from './whatsapp.js?v=20260927-copy-message2';
 import {copyMessage} from './clipboard.js';
 import {receiptFile} from './receipt-file.js';
@@ -125,11 +125,12 @@ function closeImage(){if($('image-dialog').open)$('image-dialog').close();if(ima
 $('close-image').addEventListener('click',closeImage);
 $('quotation-image').addEventListener('click',async()=>{
  if(!lastResult||quoteBusy||saleBusy||!checkSeller())return;
+ const terms={arrival:$('image-arrival').value.trim(),warranty:$('image-warranty').value.trim()};if(!terms.arrival||!terms.warranty){$('image-status').textContent='Completa la llegada estimada y la garantía.';return;}
  const snapshot=lastResult;quoteBusy=true;
- const locked=['quotation-image','discount','seller','fields','exchange-rate','new','create-sale','send-whatsapp'];
+ const locked=['image-arrival','image-warranty','quotation-image','discount','seller','fields','exchange-rate','new','create-sale','send-whatsapp'];
  for(const id of locked)$(id).disabled=true;renderSearch();$('image-status').textContent='Preparando cotización…';
  try{
-  const {data}=await api('issueCustomerQuotation')({calculationId:snapshot.calculationId,customerPhone:snapshot.customerPhone,quoteVersion:snapshot.quoteVersion??0,seller:$('seller').value.trim(),sellerDay});
+  const {data}=await api('issueCustomerQuotation')({terms,calculationId:snapshot.calculationId,customerPhone:snapshot.customerPhone,quoteVersion:snapshot.quoteVersion??0,seller:$('seller').value.trim(),sellerDay});
   const blob=await quotationImage(data);if(lastResult!==snapshot)return;
   closeImage();imageBlob=blob;imageUrl=URL.createObjectURL(blob);$('image-preview').src=imageUrl;$('download-image').href=imageUrl;$('download-image').download='PitStop-'+data.number+'.png';$('image-copy-status').textContent='';$('image-dialog').showModal();$('image-status').textContent='Cotización lista: '+data.number;
  }catch(error){$('image-status').textContent=error.code==='functions/failed-precondition'?'La cotización cambió. Recupérala nuevamente.':'No se pudo preparar la imagen. Revisa tu conexión e intenta nuevamente.';}
