@@ -1,3 +1,4 @@
+import {quotationImage} from './quotation-image.js?v=20261002';
 import {costaRicaPhone,whatsappQuotation} from './whatsapp.js?v=20260927-copy-message2';
 import {copyMessage} from './clipboard.js';
 import {receiptFile} from './receipt-file.js';
@@ -45,7 +46,7 @@ $('exchange-rate').addEventListener('input',()=>{
 });
 $('shipping-origin').addEventListener('change',()=>{if(lastResult){clearResult();notice('Origen actualizado. Pulsa Calcular repuesto para actualizar tu cotización.');}});
 function notice(message,error=false){$('notice').textContent=message;$('notice').classList.toggle('error',error);}
-function clearResult(){lastResult=undefined;$('sale-status').textContent='';$('create-sale').disabled=false;$('result-data').hidden=true;$('result-empty').hidden=false;}
+function clearResult(){closeImage();lastResult=undefined;$('sale-status').textContent='';$('create-sale').disabled=false;$('result-data').hidden=true;$('result-empty').hidden=false;}
 function currencyChanged(){if(lastResult)renderResult(lastResult);}
 $('currency').addEventListener('change',currencyChanged);
 function renderResult(item){
@@ -64,16 +65,16 @@ $('discount').addEventListener('change',async()=>{
  if(!lastResult||quoteBusy||saleBusy)return;
  if(!checkSeller())return;
  const snapshot=lastResult,discountPercent=Number($('discount').value);
- quoteBusy=true;for(const id of ['discount','seller','fields','exchange-rate','new','create-sale','send-whatsapp'])$(id).disabled=true;renderSearch();notice('Aplicando descuento…');
+ quoteBusy=true;for(const id of ['discount','seller','fields','exchange-rate','new','create-sale','send-whatsapp','quotation-image'])$(id).disabled=true;renderSearch();notice('Aplicando descuento…');
  try{const {data}=await api('setQuoteDiscount')({calculationId:snapshot.calculationId,customerPhone:snapshot.customerPhone,quoteVersion:snapshot.quoteVersion??0,discountPercent,seller:$('seller').value.trim(),sellerDay});renderResult(data);searchRows=searchRows.map(row=>row.calculationId===data.calculationId?{...row,...data}:row);notice(discountPercent?`Descuento del ${discountPercent}% aplicado.`:'Cotización sin descuento.');}
  catch(error){clearResult();notice(error.code==='functions/failed-precondition'?'Esta cotización ya tiene una venta.':error.code==='functions/aborted'?'La cotización cambió. Búscala y recupérala nuevamente.':'No se confirmó el descuento. Busca y recupera la cotización antes de continuar.',true);}
- finally{quoteBusy=false;for(const id of ['discount','seller','fields','exchange-rate','new','create-sale','send-whatsapp'])$(id).disabled=false;renderSearch();}
+ finally{quoteBusy=false;for(const id of ['discount','seller','fields','exchange-rate','new','create-sale','send-whatsapp','quotation-image'])$(id).disabled=false;renderSearch();}
 });
 $('new').addEventListener('click',()=>{resetCalculation();notice('Ingresa los datos del siguiente repuesto.');$('product').focus();});
 $('sale-success-ok').addEventListener('click',()=>{$('sale-success').close();$('product').focus();});
 
 $('calculator-form').addEventListener('submit',async e=>{
- e.preventDefault();if(!checkSeller())return;const clean=id=>$(id).value.trim().replace(',','.');
+ e.preventDefault();if(quoteBusy||!checkSeller())return;const clean=id=>$(id).value.trim().replace(',','.');
  const product=$('product').value.trim(),cost=clean('cost'),weight=clean('weight'),exchangeRate=clean('exchange-rate'),shippingOrigin=$('shipping-origin').value;
  if(!/^\+?\d{8,15}$/.test($('quote-phone').value.trim().replace(/[\s().-]/g,''))){notice('Ingresa el teléfono completo del cliente, de 8 a 15 dígitos.',true);$('quote-phone').focus();return;}
  try{const url=new URL($('product-url').value.trim());if(!['http:','https:'].includes(url.protocol)||url.username||url.password)throw new Error();}catch{notice('Ingresa un enlace válido del repuesto que comience con https:// o http://.',true);$('product-url').focus();return;}
@@ -118,3 +119,26 @@ async function searchQuotes(reset=true){
 }
 $('quote-search-form').addEventListener('submit',e=>{e.preventDefault();searchQuotes();});$('search-more').addEventListener('click',()=>searchQuotes(false));
 currencyChanged();start();
+
+let imageBlob=null,imageUrl=null;
+function closeImage(){if($('image-dialog').open)$('image-dialog').close();if(imageUrl)URL.revokeObjectURL(imageUrl);imageUrl=null;imageBlob=null;$('image-preview').removeAttribute('src');$('download-image').removeAttribute('href');}
+$('close-image').addEventListener('click',closeImage);
+$('quotation-image').addEventListener('click',async()=>{
+ if(!lastResult||quoteBusy||saleBusy||!checkSeller())return;
+ const snapshot=lastResult;quoteBusy=true;
+ const locked=['quotation-image','discount','seller','fields','exchange-rate','new','create-sale','send-whatsapp'];
+ for(const id of locked)$(id).disabled=true;renderSearch();$('image-status').textContent='Preparando cotización…';
+ try{
+  const {data}=await api('issueCustomerQuotation')({calculationId:snapshot.calculationId,customerPhone:snapshot.customerPhone,quoteVersion:snapshot.quoteVersion??0,seller:$('seller').value.trim(),sellerDay});
+  const blob=await quotationImage(data);if(lastResult!==snapshot)return;
+  closeImage();imageBlob=blob;imageUrl=URL.createObjectURL(blob);$('image-preview').src=imageUrl;$('download-image').href=imageUrl;$('download-image').download='PitStop-'+data.number+'.png';$('image-copy-status').textContent='';$('image-dialog').showModal();$('image-status').textContent='Cotización lista: '+data.number;
+ }catch(error){$('image-status').textContent=error.code==='functions/failed-precondition'?'La cotización cambió. Recupérala nuevamente.':'No se pudo preparar la imagen. Revisa tu conexión e intenta nuevamente.';}
+ finally{quoteBusy=false;for(const id of locked)$(id).disabled=false;renderSearch();}
+});
+$('copy-image').addEventListener('click',async()=>{
+ if(!imageBlob)return;
+ $('copy-image').disabled=true;
+ try{if(!navigator.clipboard?.write||typeof ClipboardItem==='undefined')throw new Error();await navigator.clipboard.write([new ClipboardItem({'image/png':imageBlob})]);$('image-copy-status').textContent='Imagen copiada. Abre el chat de WhatsApp y pega con Ctrl+V o Pegar.';}
+ catch{$('image-copy-status').textContent='Este navegador no permitió copiar la imagen. Puedes descargar el PNG y adjuntarlo en WhatsApp.';}
+ finally{$('copy-image').disabled=false;}
+});
