@@ -4,7 +4,7 @@ export async function quotationImage(q){
  const canvas=document.createElement('canvas');canvas.width=1200;
  const ctx=canvas.getContext('2d');
  const font=(size=28,bold=false)=>{ctx.font=`${bold?'700':'400'} ${size}px Arial, sans-serif`;};
- function wrap(text,width,size=28){font(size);const lines=[];let line='';for(const word of String(text).replace(/\s+/g,' ').trim().split(' ')){for(const char of (line?' ':'')+word){if(ctx.measureText(line+char).width>width){lines.push(line.trim());line='';}line+=char;}}if(line)lines.push(line.trim());return lines;}
+ function wrap(text,width,size=28){font(size);const lines=[];let line='';for(const word of String(text).replace(/\s+/g,' ').trim().split(' ')){const candidate=line?line+' '+word:word;if(ctx.measureText(candidate).width<=width){line=candidate;continue;}if(line)lines.push(line);line='';for(const char of word){if(ctx.measureText(line+char).width>width){lines.push(line);line='';}line+=char;}}if(line)lines.push(line);return lines;}
  const product=wrap(q.product,700),rowHeight=Math.max(105,product.length*38+48);
  canvas.height=1700+rowHeight;
  const rect=(x,y,w,h,color)=>{ctx.fillStyle=color;ctx.fillRect(x,y,w,h);};

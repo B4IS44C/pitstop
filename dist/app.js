@@ -1,4 +1,4 @@
-import {quotationImage} from './quotation-image.js?v=20261002b';
+import {quotationImage} from './quotation-image.js?v=20261002c';
 import {costaRicaPhone,whatsappQuotation} from './whatsapp.js?v=20260927-copy-message2';
 import {copyMessage} from './clipboard.js';
 import {receiptFile} from './receipt-file.js';
