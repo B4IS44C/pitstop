@@ -1,3 +1,4 @@
+import {paymentPdf} from './payment-pdf.js?v=20261002';
 import {quotationImage} from './quotation-image.js?v=20261002c';
 import {costaRicaPhone,whatsappQuotation} from './whatsapp.js?v=20260927-copy-message2';
 import {copyMessage} from './clipboard.js';
@@ -35,7 +36,7 @@ $('sale-form').addEventListener('submit',async e=>{
  const snapshot=lastResult,customer={phone:$('customer-phone').value.trim(),name:$('customer-name').value.trim(),address:$('customer-address').value.trim()};
  if(!/^\+?\d{8,15}$/.test(customer.phone.replace(/[\s().-]/g,''))){$('sale-error').textContent='Ingresa un teléfono de 8 a 15 dígitos, con código de país si corresponde.';return;}
  saleBusy=true;$('sale-fields').disabled=true;$('save-sale').textContent='Guardando…';$('sale-error').textContent='';
- try{const receipt=await receiptFile($('payment-receipt').files[0]);await api('createSale')({calculationId:snapshot.calculationId,quoteVersion:snapshot.quoteVersion??0,seller:$('seller').value.trim(),sellerDay,customer,receipt});$('sale-dialog').close();removeSearchQuote(snapshot.calculationId);resetCalculation();$('sale-form').reset();notice('Venta creada. Puedes iniciar un nuevo cálculo.');$('sale-success').showModal();}
+ try{const receipt=await receiptFile($('payment-receipt').files[0]);const {data:saleResult}=await api('createSale')({calculationId:snapshot.calculationId,quoteVersion:snapshot.quoteVersion??0,seller:$('seller').value.trim(),sellerDay,customer,receipt});$('sale-dialog').close();removeSearchQuote(snapshot.calculationId);resetCalculation();$('sale-form').reset();notice('Venta creada. Puedes iniciar un nuevo cálculo.');$('sale-success').showModal();lastPaymentDocument=saleResult.paymentDocument;paymentPdfBlob=null;$('receipt-pdf-status').textContent='';$('download-receipt-pdf').hidden=!lastPaymentDocument;if(lastPaymentDocument)await downloadPaymentPdf();}
  catch(error){$('sale-error').textContent=!error.code?error.message:error.code==='functions/already-exists'?'Este cálculo ya tiene una venta registrada.':error.code==='functions/failed-precondition'?'Recupera la cotización nuevamente: su descuento o estado pudo cambiar.':'No se confirmó el guardado. Revisa los datos e intenta nuevamente; no se duplicará la venta.';}
  finally{saleBusy=false;$('sale-fields').disabled=false;$('save-sale').textContent='Guardar venta';}
 });
@@ -143,3 +144,16 @@ $('copy-image').addEventListener('click',async()=>{
  catch{$('image-copy-status').textContent='Este navegador no permitió copiar la imagen. Puedes descargar el PNG y adjuntarlo en WhatsApp.';}
  finally{$('copy-image').disabled=false;}
 });
+
+let lastPaymentDocument=null,paymentPdfBlob=null,paymentPdfBusy=false;
+async function downloadPaymentPdf(){
+ if(!lastPaymentDocument||paymentPdfBusy)return;
+ paymentPdfBusy=true;$('download-receipt-pdf').disabled=true;$('receipt-pdf-status').textContent='Preparando comprobante PDF…';
+ try{
+  paymentPdfBlob??=await paymentPdf(lastPaymentDocument);
+  const url=URL.createObjectURL(paymentPdfBlob),link=document.createElement('a');link.href=url;link.download='PitStop-'+lastPaymentDocument.number+'.pdf';document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+  $('receipt-pdf-status').textContent='Comprobante listo. Si no comenzó la descarga, pulsa Descargar comprobante PDF.';
+ }catch{$('receipt-pdf-status').textContent='La venta se guardó. No se pudo generar el PDF; pulsa Descargar comprobante PDF para reintentar.';}
+ finally{paymentPdfBusy=false;$('download-receipt-pdf').disabled=false;}
+}
+$('download-receipt-pdf').addEventListener('click',downloadPaymentPdf);
