@@ -1,4 +1,5 @@
-import {paymentPdf} from './payment-pdf.js?v=20261002';
+import {initSalesSearch} from './sales-search.js?v=20261004';
+import {paymentPdf} from './payment-pdf.js?v=20261004';
 import {quotationImage} from './quotation-image.js?v=20261002c';
 import {costaRicaPhone,whatsappQuotation} from './whatsapp.js?v=20260927-copy-message2';
 import {copyMessage} from './clipboard.js';
@@ -36,8 +37,8 @@ $('sale-form').addEventListener('submit',async e=>{
  const snapshot=lastResult,customer={phone:$('customer-phone').value.trim(),name:$('customer-name').value.trim(),address:$('customer-address').value.trim()};
  if(!/^\+?\d{8,15}$/.test(customer.phone.replace(/[\s().-]/g,''))){$('sale-error').textContent='Ingresa un teléfono de 8 a 15 dígitos, con código de país si corresponde.';return;}
  saleBusy=true;$('sale-fields').disabled=true;$('save-sale').textContent='Guardando…';$('sale-error').textContent='';
- try{const receipt=await receiptFile($('payment-receipt').files[0]);const {data:saleResult}=await api('createSale')({calculationId:snapshot.calculationId,quoteVersion:snapshot.quoteVersion??0,seller:$('seller').value.trim(),sellerDay,customer,receipt});$('sale-dialog').close();removeSearchQuote(snapshot.calculationId);resetCalculation();$('sale-form').reset();notice('Venta creada. Puedes iniciar un nuevo cálculo.');$('sale-success').showModal();lastPaymentDocument=saleResult.paymentDocument;paymentPdfBlob=null;$('receipt-pdf-status').textContent='';$('download-receipt-pdf').hidden=!lastPaymentDocument;if(lastPaymentDocument)await downloadPaymentPdf();}
- catch(error){$('sale-error').textContent=!error.code?error.message:error.code==='functions/already-exists'?'Este cálculo ya tiene una venta registrada.':error.code==='functions/failed-precondition'?'Recupera la cotización nuevamente: su descuento o estado pudo cambiar.':'No se confirmó el guardado. Revisa los datos e intenta nuevamente; no se duplicará la venta.';}
+ try{const receipt=await receiptFile($('payment-receipt').files[0]);const {data:saleResult}=await api('createSale')({terms:{arrival:$('image-arrival').value.trim(),warranty:$('image-warranty').value.trim()},calculationId:snapshot.calculationId,quoteVersion:snapshot.quoteVersion??0,seller:$('seller').value.trim(),sellerDay,customer,receipt});$('sale-dialog').close();removeSearchQuote(snapshot.calculationId);resetCalculation();$('sale-form').reset();notice('Venta creada. Puedes iniciar un nuevo cálculo.');$('sale-success').showModal();lastPaymentDocument=saleResult.paymentDocument?{...saleResult.paymentDocument,trackingCode:saleResult.trackingCode}:null;$('sale-tracking-code').value=saleResult.trackingCode||'';paymentPdfBlob=null;$('receipt-pdf-status').textContent='';$('download-receipt-pdf').hidden=!lastPaymentDocument;if(lastPaymentDocument)await downloadPaymentPdf();}
+ catch(error){$('sale-error').textContent=(!error.code||error.code==='functions/invalid-argument')?error.message:error.code==='functions/already-exists'?'Este cálculo ya tiene una venta registrada.':error.code==='functions/failed-precondition'?'Recupera la cotización nuevamente: su descuento o estado pudo cambiar.':'No se confirmó el guardado. Revisa los datos e intenta nuevamente; no se duplicará la venta.';}
  finally{saleBusy=false;$('sale-fields').disabled=false;$('save-sale').textContent='Guardar venta';}
 });
 try{$('exchange-rate').value=localStorage.getItem('pitstop-exchange-rate')||'';}catch{}
@@ -97,7 +98,7 @@ async function start(){
   check.initializeAppCheck(firebase,{provider:new check.ReCaptchaEnterpriseProvider(appCheckSiteKey),isTokenAutoRefreshEnabled:true});
   const auth=authentication.getAuth(firebase);await authentication.setPersistence(auth,authentication.browserSessionPersistence);await authentication.signInAnonymously(auth);
   const backend=functions.getFunctions(firebase,region);api=name=>functions.httpsCallable(backend,name);
-  $('fields').disabled=false;$('calculate').disabled=false;$('search-button').disabled=false;notice('Ingresa el costo del repuesto en dólares.');
+  $('fields').disabled=false;$('calculate').disabled=false;$('search-button').disabled=false;$('sales-search-button').disabled=false;notice('Ingresa el costo del repuesto en dólares.');
  }catch{notice('No se pudo conectar la calculadora. Revisa tu conexión o inténtalo más tarde.',true);}
 }
 let searchRows=[],searchCursor=null,searchPhone='',searchBusy=false,quoteBusy=false;
@@ -106,7 +107,7 @@ function renderSearch(){
  const target=$('quote-results');target.replaceChildren();
  for(const item of searchRows){const card=document.createElement('article'),title=document.createElement('h3'),info=document.createElement('p'),button=document.createElement('button');
  card.className='quote-card';title.textContent=item.product;info.textContent=`+${item.customerPhone} · ${new Intl.DateTimeFormat('es-CR',{timeZone:'America/Costa_Rica',dateStyle:'short',timeStyle:'short'}).format(new Date(item.createdAt))}`;button.type='button';button.textContent='Recuperar cotización';button.className='button';button.disabled=quoteBusy||saleBusy;
- button.addEventListener('click',()=>{if(!checkSeller()||quoteBusy||saleBusy)return;$('product').value=item.product;$('quote-phone').value='+'+item.customerPhone;$('product-url').value=item.productUrl;$('cost').value=(item.costCents/100).toFixed(2);$('weight').value=String(item.weightGrams/1000);$('shipping-origin').value=item.shippingOrigin;$('exchange-rate').value=(item.exchangeRateCents/100).toFixed(2);try{localStorage.setItem('pitstop-exchange-rate',$('exchange-rate').value);}catch{}requestId=undefined;pendingPayload=undefined;renderResult({...item,seller:$('seller').value.trim()});notice('Cotización recuperada con su precio y tipo de cambio originales. Ya puedes crear la venta.');$('calculator-title').scrollIntoView({behavior:'smooth',block:'start'});});
+ button.addEventListener('click',()=>{if(!checkSeller()||quoteBusy||saleBusy)return;if(item.customerTerms){$('image-arrival').value=item.customerTerms.arrival;$('image-warranty').value=item.customerTerms.warranty;}$('product').value=item.product;$('quote-phone').value='+'+item.customerPhone;$('product-url').value=item.productUrl;$('cost').value=(item.costCents/100).toFixed(2);$('weight').value=String(item.weightGrams/1000);$('shipping-origin').value=item.shippingOrigin;$('exchange-rate').value=(item.exchangeRateCents/100).toFixed(2);try{localStorage.setItem('pitstop-exchange-rate',$('exchange-rate').value);}catch{}requestId=undefined;pendingPayload=undefined;renderResult({...item,seller:$('seller').value.trim()});notice('Cotización recuperada con su precio y tipo de cambio originales. Ya puedes crear la venta.');$('calculator-title').scrollIntoView({behavior:'smooth',block:'start'});});
  card.append(title,info,button);target.append(card);}
  $('search-more').hidden=!searchCursor;
 }
@@ -157,3 +158,6 @@ async function downloadPaymentPdf(){
  finally{paymentPdfBusy=false;$('download-receipt-pdf').disabled=false;}
 }
 $('download-receipt-pdf').addEventListener('click',downloadPaymentPdf);
+
+initSalesSearch({call:(name,payload)=>api(name)(payload),checkSeller,context:()=>({seller:$('seller').value.trim(),sellerDay})});
+$('copy-sale-code').addEventListener('click',async()=>{try{await copyMessage($('sale-tracking-code').value);$('sale-code-status').textContent='Código copiado para el cliente.';}catch{$('sale-tracking-code').focus();$('sale-tracking-code').select();$('sale-code-status').textContent='Selecciona y copia el código.';}});

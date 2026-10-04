@@ -36,6 +36,7 @@ export async function paymentPdf(q){
  box(70,y,1060,90,'#fff0f1');text('SALDO PENDIENTE',94,y+56,27,'#dd1222',true);text(crc(q.balanceMinor),1106,y+56,38,'#dd1222',true,true);y+=146;
  text('El saldo pendiente se cancela al momento de la entrega personal.',70,y,26);y+=80;
  text('¡Gracias por tu compra y por confiar en PitStop!',70,y,30,'#202126',true);text('Tu adelanto nos permite encargar el repuesto para vos.',70,y+44,26,'#5f626b');
+ if(q.trackingCode)text('Seguimiento: '+q.trackingCode,70,canvas.height-140,23,'#202126',true);
  box(70,canvas.height-100,1060,2,'#e8e9ec');text('PITSTOP REPUESTOS',70,canvas.height-48,23,'#202126',true);text('CALIDAD QUE TE MUEVE',1130,canvas.height-48,21,'#dd1222',true,true);
  const jpeg=await new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('No se pudo crear el PDF.')),'image/jpeg',0.95));
  return jpegPdf(new Uint8Array(await jpeg.arrayBuffer()),canvas.width,canvas.height);
