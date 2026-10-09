@@ -98,7 +98,7 @@ async function start(){
   check.initializeAppCheck(firebase,{provider:new check.ReCaptchaEnterpriseProvider(appCheckSiteKey),isTokenAutoRefreshEnabled:true});
   const auth=authentication.getAuth(firebase);await authentication.setPersistence(auth,authentication.browserSessionPersistence);await authentication.signInAnonymously(auth);
   const backend=functions.getFunctions(firebase,region);api=name=>functions.httpsCallable(backend,name);
-  $('fields').disabled=false;$('calculate').disabled=false;$('search-button').disabled=false;$('sales-search-button').disabled=false;notice('Ingresa el costo del repuesto en dólares.');
+  $('fields').disabled=false;$('calculate').disabled=false;$('search-button').disabled=false;$('sales-search-button').disabled=false;notice('');
  }catch{notice('No se pudo conectar la calculadora. Revisa tu conexión o inténtalo más tarde.',true);}
 }
 let searchRows=[],searchCursor=null,searchPhone='',searchBusy=false,quoteBusy=false;
