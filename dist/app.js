@@ -15,7 +15,7 @@ function checkSeller(){
  if($('seller').value.trim().length<2){notice('El vendedor es obligatorio. Escribe tu nombre.',true);$('seller').focus();return false;}return true;
 }
 $('seller').addEventListener('input',()=>{sellerDay=today();try{localStorage.setItem('pitstop-seller',JSON.stringify({name:$('seller').value.trim(),day:sellerDay}));}catch{}if(lastResult){clearResult();notice('Vendedor actualizado. Calcula nuevamente.');}});
-for(const id of ['product','cost','weight','quote-phone','product-url'])$(id).addEventListener('input',()=>{if(lastResult){clearResult();notice('Datos actualizados. Calcula nuevamente.');}});
+for(const id of ['product','cost','weight','quote-phone','product-url','product-url-2'])$(id).addEventListener('input',()=>{if(lastResult){clearResult();notice('Datos actualizados. Calcula nuevamente.');}});
 $('quote-phone').addEventListener('blur',()=>{try{$('quote-phone').value='+'+costaRicaPhone($('quote-phone').value);}catch{}});
 let copyBusy=false;
 $('send-whatsapp').addEventListener('click',async()=>{
@@ -62,7 +62,7 @@ function renderResult(item){
  if(crc&&valid){$('converted-total').textContent=`Total en dólares: ${money(item.totalCents)}`;$('used-rate').textContent=`US$ 1 = ${money(rate,'CRC')} · Tipo de cambio ingresado`;}
  $('result-origin').textContent=item.shippingOrigin==='COLOMBIA'?'Colombia':'USA';$('result-product').textContent=item.product;$('result-cost').textContent=money(item.costCents);$('result-weight').textContent=`${item.weightGrams/1000} kg`;
 }
-function resetCalculation(){$('quote-phone').value='';$('product-url').value='';$('product').value='';$('cost').value='';$('weight').value='';requestId=undefined;pendingPayload=undefined;clearResult();}
+function resetCalculation(){$('quote-phone').value='';$('product-url').value='';$('product-url-2').value='';$('second-product-link').hidden=true;$('add-product-link').hidden=false;$('add-product-link').setAttribute('aria-expanded','false');$('product').value='';$('cost').value='';$('weight').value='';requestId=undefined;pendingPayload=undefined;clearResult();}
 $('discount').addEventListener('change',async()=>{
  if(!lastResult||quoteBusy||saleBusy)return;
  if(!checkSeller())return;
@@ -82,7 +82,8 @@ $('calculator-form').addEventListener('submit',async e=>{
  try{const url=new URL($('product-url').value.trim());if(!['http:','https:'].includes(url.protocol)||url.username||url.password)throw new Error();}catch{notice('Ingresa un enlace válido del repuesto que comience con https:// o http://.',true);$('product-url').focus();return;}
  if(product.length<3||!/^\d{1,9}(\.\d{1,2})?$/.test(cost)||Number(cost)<=0||!/^\d{1,4}(\.\d{1,3})?$/.test(weight)||Number(weight)<=0||Number(weight)>1000){notice('Revisa el nombre (mínimo 3 caracteres), el costo positivo (2 decimales) y el peso (hasta 1.000 kg, con 3 decimales).',true);return;}
  if(!/^\d{1,5}(\.\d{1,2})?$/.test(exchangeRate)||Number(exchangeRate)<1||Number(exchangeRate)>10000){notice('Ingresa un tipo de cambio entre ₡1 y ₡10.000 por dólar, con hasta 2 decimales.',true);$('exchange-rate').focus();return;}
- const payload=JSON.stringify({customerPhone:$('quote-phone').value.trim(),productUrl:$('product-url').value.trim(),product,cost,weight,currency:'USD',exchangeRate,shippingOrigin,seller:$('seller').value.trim(),sellerDay});
+ for(const id of ['product-url-2']){const value=$(id).value.trim();if(value){try{const url=new URL(value);if(!['http:','https:'].includes(url.protocol)||url.username||url.password)throw new Error();}catch{notice('Revisa el segundo enlace o deja la casilla vacía.',true);$(id).focus();return;}}}
+ const payload=JSON.stringify({productUrl2:$('product-url-2').value.trim(),customerPhone:$('quote-phone').value.trim(),productUrl:$('product-url').value.trim(),product,cost,weight,currency:'USD',exchangeRate,shippingOrigin,seller:$('seller').value.trim(),sellerDay});
  if(payload!==pendingPayload){requestId=crypto.randomUUID();pendingPayload=payload;}
  $('seller').disabled=true;$('fields').disabled=true;$('exchange-rate').disabled=true;$('new').disabled=true;quoteBusy=true;renderSearch();$('calculate').textContent='Calculando…';clearResult();
  try{const {data}=await api('calculate')({...JSON.parse(payload),requestId});renderResult(data);notice('Tu cotización está lista.');requestId=undefined;pendingPayload=undefined;}
@@ -107,7 +108,7 @@ function renderSearch(){
  const target=$('quote-results');target.replaceChildren();
  for(const item of searchRows){const card=document.createElement('article'),title=document.createElement('h3'),info=document.createElement('p'),button=document.createElement('button');
  card.className='quote-card';title.textContent=item.product;info.textContent=`+${item.customerPhone} · ${new Intl.DateTimeFormat('es-CR',{timeZone:'America/Costa_Rica',dateStyle:'short',timeStyle:'short'}).format(new Date(item.createdAt))}`;button.type='button';button.textContent='Recuperar cotización';button.className='button';button.disabled=quoteBusy||saleBusy;
- button.addEventListener('click',()=>{if(!checkSeller()||quoteBusy||saleBusy)return;if(item.customerTerms){$('image-arrival').value=item.customerTerms.arrival;$('image-warranty').value=item.customerTerms.warranty;}$('product').value=item.product;$('quote-phone').value='+'+item.customerPhone;$('product-url').value=item.productUrl;$('cost').value=(item.costCents/100).toFixed(2);$('weight').value=String(item.weightGrams/1000);$('shipping-origin').value=item.shippingOrigin;$('exchange-rate').value=(item.exchangeRateCents/100).toFixed(2);try{localStorage.setItem('pitstop-exchange-rate',$('exchange-rate').value);}catch{}requestId=undefined;pendingPayload=undefined;renderResult({...item,seller:$('seller').value.trim()});notice('Cotización recuperada con su precio y tipo de cambio originales. Ya puedes crear la venta.');$('calculator-title').scrollIntoView({behavior:'smooth',block:'start'});});
+ button.addEventListener('click',()=>{if(!checkSeller()||quoteBusy||saleBusy)return;if(item.customerTerms){$('image-arrival').value=item.customerTerms.arrival;$('image-warranty').value=item.customerTerms.warranty;}$('product').value=item.product;$('quote-phone').value='+'+item.customerPhone;$('product-url').value=item.productUrl;$('product-url-2').value=item.productUrl2||'';$('second-product-link').hidden=!item.productUrl2;$('add-product-link').hidden=!!item.productUrl2;$('add-product-link').setAttribute('aria-expanded',String(!!item.productUrl2));$('cost').value=(item.costCents/100).toFixed(2);$('weight').value=String(item.weightGrams/1000);$('shipping-origin').value=item.shippingOrigin;$('exchange-rate').value=(item.exchangeRateCents/100).toFixed(2);try{localStorage.setItem('pitstop-exchange-rate',$('exchange-rate').value);}catch{}requestId=undefined;pendingPayload=undefined;renderResult({...item,seller:$('seller').value.trim()});notice('Cotización recuperada con su precio y tipo de cambio originales. Ya puedes crear la venta.');$('calculator-title').scrollIntoView({behavior:'smooth',block:'start'});});
  card.append(title,info,button);target.append(card);}
  $('search-more').hidden=!searchCursor;
 }
@@ -161,3 +162,6 @@ $('download-receipt-pdf').addEventListener('click',downloadPaymentPdf);
 
 initSalesSearch({call:(name,payload)=>api(name)(payload),checkSeller,context:()=>({seller:$('seller').value.trim(),sellerDay})});
 $('copy-sale-code').addEventListener('click',async()=>{try{await copyMessage($('sale-tracking-code').value);$('sale-code-status').textContent='Código copiado para el cliente.';}catch{$('sale-tracking-code').focus();$('sale-tracking-code').select();$('sale-code-status').textContent='Selecciona y copia el código.';}});
+
+$('add-product-link').addEventListener('click',()=>{$('second-product-link').hidden=false;$('add-product-link').hidden=true;$('add-product-link').setAttribute('aria-expanded','true');$('product-url-2').focus();});
+$('remove-product-link').addEventListener('click',()=>{const hadValue=!!$('product-url-2').value;$('product-url-2').value='';$('second-product-link').hidden=true;$('add-product-link').hidden=false;$('add-product-link').setAttribute('aria-expanded','false');if(hadValue&&lastResult){clearResult();notice('Enlace actualizado. Calcula nuevamente.');}$('add-product-link').focus();});
