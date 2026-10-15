@@ -3,7 +3,7 @@ async function multiplePaymentPdf(q) {
   const logo = new Image();
   logo.src = new URL("./assets/logo.jpeg", import.meta.url).href;
   await logo.decode();
-  const pages = [], W = 1200, H = 1697, crc3 = (n) => "\u20A1" + new Intl.NumberFormat("es-CR").format(n / 100);
+  const pages = [], W = 1200, H = 1697, crc = (n) => q.currency === "USD" ? "US$ " + new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n / 100) : "\u20A1" + new Intl.NumberFormat("es-CR").format(n / 100);
   let canvas, c, y;
   const text = (s, x, yy, size = 24, bold = false, right = false) => {
     c.font = `${bold ? 700 : 400} ${size}px Arial`;
@@ -75,9 +75,9 @@ async function multiplePaymentPdf(q) {
       headings();
     }
     lines.forEach((s, i) => text(s, 85, y + i * 30));
-    text(crc3(item.totalMinor), 760, y, 23, true, true);
-    text(crc3(item.paidMinor), 950, y, 23, true, true);
-    text(crc3(item.balanceMinor), 1120, y, 23, true, true);
+    text(crc(item.totalMinor), 760, y, 23, true, true);
+    text(crc(item.paidMinor), 950, y, 23, true, true);
+    text(crc(item.balanceMinor), 1120, y, 23, true, true);
     y += height;
     c.fillStyle = "#e2e4e8";
     c.fillRect(70, y - 38, 1060, 1);
@@ -88,7 +88,7 @@ async function multiplePaymentPdf(q) {
   }
   for (const [label, value] of [["Env\xEDo GRATIS (0%)", 0], ["Total de la compra", q.totalMinor], ["Adelanto recibido \xB7 20%", q.paidMinor], ["Saldo pendiente", q.balanceMinor]]) {
     text(label, 85, y, 28, true);
-    text(crc3(value), 1120, y, 30, true, true);
+    text(crc(value), 1120, y, 30, true, true);
     y += 65;
   }
   text("El saldo se cancela al momento de la entrega personal.", 85, y + 15, 24);
@@ -143,7 +143,6 @@ ${x}
 }
 
 // outputs/pitstop/dist/payment-pdf.js?v=20261015
-var crc = (value) => "\u20A1" + new Intl.NumberFormat("es-CR", { maximumFractionDigits: 2 }).format(value / 100);
 function jpegPdf(jpeg, width, height) {
   const enc = new TextEncoder(), parts = [], offsets = [0];
   let length = 0;
@@ -188,6 +187,7 @@ ${start2}
   return new Blob(parts, { type: "application/pdf" });
 }
 async function paymentPdf(q) {
+  const crc = (value) => q.currency === "USD" ? "US$ " + new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value / 100) : "\u20A1" + new Intl.NumberFormat("es-CR", { maximumFractionDigits: 2 }).format(value / 100);
   if (q.items?.length) return multiplePaymentPdf(q);
   const logo = new Image();
   logo.src = new URL("./assets/logo.jpeg", import.meta.url).href;
@@ -301,9 +301,9 @@ function initMultipleSale({ call, context = () => ({}), check = () => true, owne
   const dialog = document.createElement("dialog");
   dialog.className = "multi-dialog";
   dialog.setAttribute("aria-label", owner ? "Editar venta m\xFAltiple" : "Generar venta m\xFAltiple");
-  dialog.innerHTML = `<div class="multi-heading"><h2>${owner ? "Editar" : "Generar"} venta m\xFAltiple</h2><button type="button" data-close aria-label="Cerrar">\xD7</button></div><p>Selecciona las cotizaciones del mismo cliente. El adelanto y el saldo se suman por producto.</p><form data-search><label>Tel\xE9fono del cliente<input data-phone type="tel" required placeholder="+506 8888 8888"></label><button class="button" type="submit">Buscar cotizaciones</button></form><label>Filtrar por nombre del repuesto<input data-filter type="search" placeholder="Nombre del repuesto"></label><div data-list class="multi-list"></div><button type="button" data-more hidden>Ver m\xE1s cotizaciones</button><div data-totals class="multi-totals" aria-live="polite"></div><form data-save><fieldset data-fields>${owner ? "" : '<label>Nombre del cliente (opcional)<input data-name maxlength="120"></label><label>Direcci\xF3n de entrega<textarea data-address required maxlength="1000" rows="2"></textarea></label><label>Comprobante de pago (opcional)<input data-receipt type="file" accept="image/jpeg,image/png,image/webp"></label>'}<p>${owner ? "Los importes, el PDF y el seguimiento se actualizar\xE1n. Se conserva el c\xF3digo." : "Estas cotizaciones se convertir\xE1n en una sola venta por aprobar."}</p><button type="submit" class="button" data-submit>${owner ? "Guardar cambios" : "Crear venta m\xFAltiple y PDF"}</button></fieldset></form><p data-status role="status"></p><div data-success hidden><label>C\xF3digo de seguimiento<input data-code readonly></label><button type="button" data-copy>Copiar c\xF3digo</button><button type="button" data-pdf>Descargar PDF nuevamente</button></div>`;
+  dialog.innerHTML = `<div class="multi-heading"><h2>${owner ? "Editar" : "Generar"} venta m\xFAltiple</h2><button type="button" data-close aria-label="Cerrar">\xD7</button></div><p>Selecciona las cotizaciones del mismo cliente. El adelanto y el saldo se suman por producto.</p><form data-search><label>Tel\xE9fono del cliente<input data-phone type="tel" required placeholder="+506 8888 8888"></label><button class="button" type="submit">Buscar cotizaciones</button></form><label>Filtrar por nombre del repuesto<input data-filter type="search" placeholder="Nombre del repuesto"></label><div data-list class="multi-list"></div><button type="button" data-more hidden>Ver m\xE1s cotizaciones</button><div data-totals class="multi-totals" aria-live="polite"></div><form data-save><fieldset data-fields><label class="payment-currency-choice"><input data-usd type="checkbox"> Pagado en d\xF3lares <small>El comprobante completo se emitir\xE1 en USD.</small></label>${owner ? "" : '<label>Nombre del cliente (opcional)<input data-name maxlength="120"></label><label>Direcci\xF3n de entrega<textarea data-address required maxlength="1000" rows="2"></textarea></label><label>Comprobante de pago (opcional)<input data-receipt type="file" accept="image/jpeg,image/png,image/webp"></label>'}<p>${owner ? "Los importes, el PDF y el seguimiento se actualizar\xE1n. Se conserva el c\xF3digo." : "Estas cotizaciones se convertir\xE1n en una sola venta por aprobar."}</p><button type="submit" class="button" data-submit>${owner ? "Guardar cambios" : "Crear venta m\xFAltiple y PDF"}</button></fieldset></form><p data-status role="status"></p><div data-success hidden><label>C\xF3digo de seguimiento<input data-code readonly></label><button type="button" data-copy>Copiar c\xF3digo</button><button type="button" data-pdf>Descargar PDF nuevamente</button></div>`;
   document.body.append(dialog);
-  const $2 = (s) => dialog.querySelector(s), money2 = (n) => "\u20A1" + new Intl.NumberFormat("es-CR").format(n / 100);
+  const $2 = (s) => dialog.querySelector(s), money2 = (n) => $2("[data-usd]").checked ? "US$ " + new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n / 100) : "\u20A1" + new Intl.NumberFormat("es-CR").format(n / 100);
   let selected = /* @__PURE__ */ new Map(), rows = /* @__PURE__ */ new Map(), cursor = null, phone = "", sale = null, busy = false, requestId2, documentData;
   function render() {
     const list = $2("[data-list]");
@@ -316,7 +316,7 @@ function initMultipleSale({ call, context = () => ({}), check = () => true, owne
       input.type = "checkbox";
       input.checked = selected.has(row.id);
       input.disabled = busy;
-      span.textContent = `${row.product} \xB7 ${new Intl.DateTimeFormat("es-CR").format(new Date(row.createdAt))} \xB7 ${money2(row.totalMinor)} \xB7 ${row.arrival}`;
+      span.textContent = `${row.product} \xB7 ${new Intl.DateTimeFormat("es-CR").format(new Date(row.createdAt))} \xB7 ${money2($2("[data-usd]").checked ? row.totalCents : row.totalMinor)} \xB7 ${row.arrival}`;
       input.addEventListener("change", () => {
         if (input.checked) selected.set(row.id, row);
         else selected.delete(row.id);
@@ -326,7 +326,7 @@ function initMultipleSale({ call, context = () => ({}), check = () => true, owne
       label.append(input, span);
       list.append(label);
     }
-    const values = [...selected.values()], total = values.reduce((n, r) => n + r.totalMinor, 0), paid = values.reduce((n, r) => n + r.paidMinor, 0);
+    const values = [...selected.values()], total = values.reduce((n, r) => n + ($2("[data-usd]").checked ? r.totalCents : r.totalMinor), 0), paid = values.reduce((n, r) => n + ($2("[data-usd]").checked ? r.paidUsdMinor : r.paidMinor), 0);
     $2("[data-totals]").textContent = `${values.length} seleccionadas \xB7 Total: ${money2(total)} \xB7 Adelanto: ${money2(paid)} \xB7 Saldo: ${money2(total - paid)}`;
     $2("[data-submit]").disabled = busy || values.length < 2 || values.length > 20;
     $2("[data-more]").hidden = !cursor;
@@ -364,6 +364,10 @@ function initMultipleSale({ call, context = () => ({}), check = () => true, owne
   });
   $2("[data-more]").onclick = () => search(true);
   $2("[data-filter]").oninput = render;
+  $2("[data-usd]").onchange = () => {
+    requestId2 = null;
+    render();
+  };
   $2("[data-phone]").oninput = () => {
     selected.clear();
     rows.clear();
@@ -388,7 +392,7 @@ function initMultipleSale({ call, context = () => ({}), check = () => true, owne
     $2("[data-status]").textContent = "Guardando venta\u2026";
     try {
       requestId2 ??= crypto.randomUUID();
-      const payload = { ...context(), requestId: requestId2, items: [...selected.values()].map((r) => ({ id: r.id, quoteVersion: r.quoteVersion })), ...sale ? { saleId: sale.id, version: sale.version } : { customer: { phone, name: $2("[data-name]").value.trim(), address: $2("[data-address]").value.trim() }, receipt: await receiptFile($2("[data-receipt]").files[0]) } };
+      const payload = { ...context(), paymentCurrency: $2("[data-usd]").checked ? "USD" : "CRC", requestId: requestId2, items: [...selected.values()].map((r) => ({ id: r.id, quoteVersion: r.quoteVersion })), ...sale ? { saleId: sale.id, version: sale.version } : { customer: { phone, name: $2("[data-name]").value.trim(), address: $2("[data-address]").value.trim() }, receipt: await receiptFile($2("[data-receipt]").files[0]) } };
       const { data } = await call("saveMultipleSale", payload);
       documentData = { ...data.paymentDocument, trackingCode: data.trackingCode };
       $2("[data-code]").value = data.trackingCode;
@@ -444,6 +448,7 @@ function initMultipleSale({ call, context = () => ({}), check = () => true, owne
     $2("[data-phone]").value = sale?.customer?.phone || "";
     $2("[data-phone]").readOnly = !!sale;
     $2("[data-save]").reset();
+    $2("[data-usd]").checked = sale?.paymentDocument?.currency === "USD";
     $2("[data-save]").hidden = false;
     $2("[data-search]").hidden = false;
     $2("[data-success]").hidden = true;
@@ -585,8 +590,8 @@ function initSalesSearch({ call, checkSeller: checkSeller2, context }) {
 }
 
 // outputs/pitstop/dist/quotation-image.js?v=20261002c
-var crc2 = (value) => "\u20A1" + new Intl.NumberFormat("es-CR", { maximumFractionDigits: 2 }).format(value / 100);
 async function quotationImage(q) {
+  const crc = (value) => q.currency === "USD" ? "US$ " + new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value / 100) : "\u20A1" + new Intl.NumberFormat("es-CR", { maximumFractionDigits: 2 }).format(value / 100);
   const logo = new Image();
   logo.src = new URL("./assets/logo.jpeg", import.meta.url).href;
   await logo.decode();
@@ -647,20 +652,20 @@ async function quotationImage(q) {
   text("IMPORTE", 1108, 551, 23, "#fff", true, "right");
   let y = 572;
   product.forEach((line, i) => text(line, 92, y + 45 + i * 38, 28));
-  text(crc2(q.productMinor), 1108, y + 45, 30, "#202126", true, "right");
+  text(crc(q.productMinor), 1108, y + 45, 30, "#202126", true, "right");
   y += rowHeight;
   rect(70, y, 1060, 2, "#e8e9ec");
   text("Env\xEDo", 92, y + 50);
   text("GRATIS", 240, y + 50, 24, "#dd1222", true);
-  text(crc2(q.shippingMinor), 1108, y + 50, 28, "#202126", false, "right");
+  text(crc(q.shippingMinor), 1108, y + 50, 28, "#202126", false, "right");
   y += 90;
   rect(70, y, 1060, 2, "#e8e9ec");
   text("Subtotal", 730, y + 54, 27);
-  text(crc2(q.subtotalMinor), 1108, y + 54, 30, "#202126", true, "right");
+  text(crc(q.subtotalMinor), 1108, y + 54, 30, "#202126", true, "right");
   y += 86;
   rect(70, y, 1060, 104, "#101114");
   text("TOTAL", 94, y + 65, 30, "#fff", true);
-  text(crc2(q.totalMinor), 1106, y + 69, 48, "#fff", true, "right");
+  text(crc(q.totalMinor), 1106, y + 69, 48, "#fff", true, "right");
   y += 164;
   text("CONDICIONES DE PAGO", 70, y, 23, "#dd1222", true);
   y += 28;
@@ -668,7 +673,7 @@ async function quotationImage(q) {
   for (const [label, amount] of rows) {
     rect(70, y, 1060, 66, label.startsWith("Adelanto") ? "#fff0f1" : "#f4f5f7");
     text(label, 94, y + 43, 27, "#202126", true);
-    text(crc2(amount), 1106, y + 43, 30, "#202126", true, "right");
+    text(crc(amount), 1106, y + 43, 30, "#202126", true, "right");
     y += 70;
   }
   y += 40;
@@ -694,15 +699,15 @@ function costaRicaPhone(value) {
   return phone.replace(/^\+/, "");
 }
 function whatsappQuotation(item) {
-  const phone = costaRicaPhone(item?.customerPhone), total = item?.totalCrcMinor;
+  const phone = costaRicaPhone(item?.customerPhone), total = item?.paymentCurrency === "USD" ? item?.totalCents : item?.totalCrcMinor;
   if (!Number.isSafeInteger(total) || total <= 0) throw new Error("Calcula la cotizaci\xF3n en colones antes de enviarla.");
   const product = String(item.product || "").trim().replace(/\s+/g, " ");
   if (!product) throw new Error("Falta el nombre del repuesto. Calcula nuevamente.");
-  const advance = Math.min(total, Math.ceil(total / 5e5) * 1e5), balance = total - advance;
-  const crc3 = (minor) => "\u20A1" + new Intl.NumberFormat("es-CR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(minor / 100);
+  const advance = item.paymentCurrency === "USD" ? Math.round(total / 5) : Math.min(total, Math.ceil(total / 5e5) * 1e5), balance = total - advance;
+  const crc = (minor) => item.paymentCurrency === "USD" ? "US$ " + new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(minor / 100) : "\u20A1" + new Intl.NumberFormat("es-CR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(minor / 100);
   const message = `Perfecto, excelente. \u{1F44D}\u{1F3FB} Ya confirmamos que el repuesto es el correcto y podemos solicitarlo por encargo como pedido especial.
 
-El precio del repuesto (${product}) ser\xEDa de ${crc3(total)} y para realizar el pedido se requiere un adelanto del 20% ${crc3(advance)}. El restante ${crc3(balance)} se cancela al momento de la entrega personal.
+El precio del repuesto (${product}) ser\xEDa de ${crc(total)} y para realizar el pedido se requiere un adelanto del 20% ${crc(advance)}. El restante ${crc(balance)} se cancela al momento de la entrega personal.
 
 \u23F1\uFE0F Tiempo estimado de llegada: 8\u201312 d\xEDas
 \u{1F6E1}\uFE0F Garant\xEDa: 1 mes
@@ -782,7 +787,7 @@ $("send-whatsapp").addEventListener("click", async () => {
   if (!lastResult || quoteBusy || saleBusy || copyBusy || !checkSeller()) return;
   let message;
   try {
-    message = whatsappQuotation(lastResult).message;
+    message = whatsappQuotation({ ...lastResult, paymentCurrency: $("quote-paid-usd").checked ? "USD" : "CRC" }).message;
   } catch (error) {
     $("whatsapp-status").textContent = error.message;
     return;
@@ -810,6 +815,7 @@ $("send-whatsapp").addEventListener("click", async () => {
 $("create-sale").addEventListener("click", () => {
   if (!checkSeller() || !lastResult) return;
   $("sale-form").reset();
+  $("sale-paid-usd").checked = $("quote-paid-usd").checked;
   $("customer-phone").value = lastResult.customerPhone || $("quote-phone").value;
   $("sale-error").textContent = "";
   $("sale-summary").textContent = `${lastResult.product} \xB7 ${money(lastResult.totalCents)} \xB7 Vendedor: ${lastResult.seller}`;
@@ -835,7 +841,7 @@ $("sale-form").addEventListener("submit", async (e) => {
   $("sale-error").textContent = "";
   try {
     const receipt = await receiptFile($("payment-receipt").files[0]);
-    const { data: saleResult } = await api("createSale")({ terms: { arrival: $("image-arrival").value.trim(), warranty: $("image-warranty").value.trim() }, calculationId: snapshot.calculationId, quoteVersion: snapshot.quoteVersion ?? 0, seller: $("seller").value.trim(), sellerDay, customer, receipt });
+    const { data: saleResult } = await api("createSale")({ paymentCurrency: $("sale-paid-usd").checked ? "USD" : "CRC", terms: { arrival: $("image-arrival").value.trim(), warranty: $("image-warranty").value.trim() }, calculationId: snapshot.calculationId, quoteVersion: snapshot.quoteVersion ?? 0, seller: $("seller").value.trim(), sellerDay, customer, receipt });
     $("sale-dialog").close();
     removeSearchQuote(snapshot.calculationId);
     resetCalculation();
@@ -900,14 +906,14 @@ function renderResult(item) {
   $("discount").value = String(item.discountPercent ?? 0);
   $("result-empty").hidden = true;
   $("result-data").hidden = false;
-  const crc3 = $("currency").value === "CRC", valid = !!item.exchangeRateCents, rate = item.exchangeRateCents;
+  const crc = $("currency").value === "CRC", valid = !!item.exchangeRateCents, rate = item.exchangeRateCents;
   const discount = item.discountPercent ?? 0;
   $("discount-summary").hidden = !discount;
-  $("discount-summary").textContent = discount ? `Antes: ${money(crc3 ? item.crcRoundingUnit === 1e3 ? Math.ceil(item.totalBeforeDiscountCents * rate / 1e7) * 1e5 : Math.round(item.totalBeforeDiscountCents * rate / 100) : item.totalBeforeDiscountCents, crc3 ? "CRC" : "USD")} \xB7 Descuento aplicado: ${discount}%` : "";
-  $("total").textContent = crc3 ? valid ? money(item.totalCrcMinor, "CRC") : "\u2014" : money(item.totalCents);
-  $("total-caption").textContent = crc3 ? valid ? item.crcRoundingUnit === 1e3 ? "Colones \xB7 Redondeado hacia arriba a \u20A11.000" : "Colones costarricenses \xB7 CRC" : "Conversi\xF3n no disponible. Selecciona d\xF3lares o intenta de nuevo en unos momentos." : "D\xF3lares estadounidenses \xB7 USD";
-  $("conversion").hidden = !crc3 || !valid;
-  if (crc3 && valid) {
+  $("discount-summary").textContent = discount ? `Antes: ${money(crc ? item.crcRoundingUnit === 1e3 ? Math.ceil(item.totalBeforeDiscountCents * rate / 1e7) * 1e5 : Math.round(item.totalBeforeDiscountCents * rate / 100) : item.totalBeforeDiscountCents, crc ? "CRC" : "USD")} \xB7 Descuento aplicado: ${discount}%` : "";
+  $("total").textContent = crc ? valid ? money(item.totalCrcMinor, "CRC") : "\u2014" : money(item.totalCents);
+  $("total-caption").textContent = crc ? valid ? item.crcRoundingUnit === 1e3 ? "Colones \xB7 Redondeado hacia arriba a \u20A11.000" : "Colones costarricenses \xB7 CRC" : "Conversi\xF3n no disponible. Selecciona d\xF3lares o intenta de nuevo en unos momentos." : "D\xF3lares estadounidenses \xB7 USD";
+  $("conversion").hidden = !crc || !valid;
+  if (crc && valid) {
     $("converted-total").textContent = `Total en d\xF3lares: ${money(item.totalCents)}`;
     $("used-rate").textContent = `US$ 1 = ${money(rate, "CRC")} \xB7 Tipo de cambio ingresado`;
   }
@@ -917,6 +923,7 @@ function renderResult(item) {
   $("result-weight").textContent = `${item.weightGrams / 1e3} kg`;
 }
 function resetCalculation() {
+  $("quote-paid-usd").checked = false;
   $("quote-phone").value = "";
   $("product-url").value = "";
   $("product-url-2").value = "";
@@ -1080,6 +1087,7 @@ function renderSearch() {
     button.disabled = quoteBusy || saleBusy;
     button.addEventListener("click", () => {
       if (!checkSeller() || quoteBusy || saleBusy) return;
+      $("quote-paid-usd").checked = item.customerTerms?.currency === "USD";
       if (item.customerTerms) {
         $("image-arrival").value = item.customerTerms.arrival;
         $("image-warranty").value = item.customerTerms.warranty;
@@ -1163,12 +1171,12 @@ $("quotation-image").addEventListener("click", async () => {
   }
   const snapshot = lastResult;
   quoteBusy = true;
-  const locked = ["image-arrival", "image-warranty", "quotation-image", "discount", "seller", "fields", "exchange-rate", "new", "create-sale", "send-whatsapp"];
+  const locked = ["quote-paid-usd", "image-arrival", "image-warranty", "quotation-image", "discount", "seller", "fields", "exchange-rate", "new", "create-sale", "send-whatsapp"];
   for (const id of locked) $(id).disabled = true;
   renderSearch();
   $("image-status").textContent = "Preparando cotizaci\xF3n\u2026";
   try {
-    const { data } = await api("issueCustomerQuotation")({ terms, calculationId: snapshot.calculationId, customerPhone: snapshot.customerPhone, quoteVersion: snapshot.quoteVersion ?? 0, seller: $("seller").value.trim(), sellerDay });
+    const { data } = await api("issueCustomerQuotation")({ paymentCurrency: $("quote-paid-usd").checked ? "USD" : "CRC", terms, calculationId: snapshot.calculationId, customerPhone: snapshot.customerPhone, quoteVersion: snapshot.quoteVersion ?? 0, seller: $("seller").value.trim(), sellerDay });
     const blob = await quotationImage(data);
     if (lastResult !== snapshot) return;
     closeImage();
@@ -1268,3 +1276,8 @@ var openMultiple = initMultipleSale({ call: (name, data) => api(name)(data), con
   resetCalculation();
 } });
 $("open-multiple-sale").addEventListener("click", () => openMultiple());
+$("quote-paid-usd").addEventListener("change", () => {
+  closeImage();
+  $("copy-message").hidden = true;
+  $("whatsapp-status").textContent = $("quote-paid-usd").checked ? "Cotizaci\xF3n en d\xF3lares \xB7 USD" : "Cotizaci\xF3n en colones \xB7 CRC";
+});
