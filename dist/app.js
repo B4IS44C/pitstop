@@ -745,33 +745,29 @@ var lastResult;
 var sellerDay;
 var saleBusy = false;
 var today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Costa_Rica", year: "numeric", month: "2-digit", day: "2-digit" }).format(/* @__PURE__ */ new Date());
+var sellers = ["Jean", "Isaac", "Esteban"];
 try {
   const saved = JSON.parse(localStorage.getItem("pitstop-seller") || "null");
-  if (saved?.day === today()) {
-    $("seller").value = saved.name;
-    sellerDay = saved.day;
+  const name = saved?.name?.toLowerCase() === "lija" ? "Esteban" : sellers.find((n) => n.toLowerCase() === saved?.name?.toLowerCase());
+  if (name) {
+    $("seller").value = name;
+    sellerDay = today();
   }
 } catch {
 }
 function checkSeller() {
-  if (sellerDay !== today()) {
-    $("seller").value = "";
-    clearResult();
-    notice("Escribe el nombre del vendedor para este nuevo d\xEDa.", true);
+  if (!sellers.includes($("seller").value)) {
+    notice("El vendedor es obligatorio. Selecciona tu nombre.", true);
     $("seller").focus();
     return false;
   }
-  if ($("seller").value.trim().length < 2) {
-    notice("El vendedor es obligatorio. Escribe tu nombre.", true);
-    $("seller").focus();
-    return false;
-  }
+  sellerDay = today();
   return true;
 }
-$("seller").addEventListener("input", () => {
+$("seller").addEventListener("change", () => {
   sellerDay = today();
   try {
-    localStorage.setItem("pitstop-seller", JSON.stringify({ name: $("seller").value.trim(), day: sellerDay }));
+    localStorage.setItem("pitstop-seller", JSON.stringify({ name: $("seller").value }));
   } catch {
   }
   if (lastResult) {
