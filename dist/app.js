@@ -718,7 +718,7 @@ function whatsappQuotation(item) {
 
 El precio del repuesto (${product}) ser\xEDa de ${crc(total)} y para realizar el pedido se requiere un adelanto del 20% ${crc(advance)}. El restante ${crc(balance)} se cancela al momento de la entrega personal.
 
-\u23F1\uFE0F Tiempo estimado de llegada: 8\u201312 d\xEDas
+\u23F1\uFE0F Tiempo estimado de llegada: 12\u201315 d\xEDas
 \u{1F6E1}\uFE0F Garant\xEDa: 1 mes
 
 Una vez realizado el adelanto, procedemos a encargarlo. \xA1Muchas gracias por la confianza!`;
