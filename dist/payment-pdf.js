@@ -1,5 +1,5 @@
-import {multiplePaymentPdf,pdf} from './multiple-pdf.js?v=20261029';
-import {receiptTermsPages} from './receipt-terms.js?v=20261029';
+import {multiplePaymentPdf,pdf} from './multiple-pdf.js?v=20261030';
+import {receiptTermsPages} from './receipt-terms.js?v=20261030';
 
 // One-page PDF with an embedded high-resolution JPEG; no external PDF service.
 export function jpegPdf(jpeg,width,height){

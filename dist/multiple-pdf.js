@@ -1,4 +1,4 @@
-import {receiptTermsPages} from './receipt-terms.js?v=20261029';
+import {receiptTermsPages} from './receipt-terms.js?v=20261030';
 // Multi-item PDF renderer. Individual receipt rendering remains unchanged.
 export async function multiplePaymentPdf(q){
  const logo=new Image();logo.src=new URL('./assets/logo.jpeg',import.meta.url).href;await logo.decode();
