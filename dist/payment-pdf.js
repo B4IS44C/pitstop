@@ -1,4 +1,6 @@
-const crc=value=>'₡'+new Intl.NumberFormat('es-CR',{maximumFractionDigits:2}).format(value/100);
+import {multiplePaymentPdf,pdf} from './multiple-pdf.js?v=20261029';
+import {receiptTermsPages} from './receipt-terms.js?v=20261029';
+
 // One-page PDF with an embedded high-resolution JPEG; no external PDF service.
 export function jpegPdf(jpeg,width,height){
  const enc=new TextEncoder(),parts=[],offsets=[0];let length=0;
@@ -15,6 +17,8 @@ export function jpegPdf(jpeg,width,height){
  return new Blob(parts,{type:'application/pdf'});
 }
 export async function paymentPdf(q){
+ const crc=value=>q.currency==='USD'?'US$ '+new Intl.NumberFormat('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}).format(value/100):'₡'+new Intl.NumberFormat('es-CR',{maximumFractionDigits:2}).format(value/100);
+ if(q.items?.length)return multiplePaymentPdf(q);
  const logo=new Image();logo.src=new URL('./assets/logo.jpeg',import.meta.url).href;await logo.decode();
  const canvas=document.createElement('canvas');canvas.width=1200;const c=canvas.getContext('2d');
  const font=(size,bold=false)=>{c.font=`${bold?'700':'400'} ${size}px Arial, sans-serif`;};
@@ -32,12 +36,12 @@ export async function paymentPdf(q){
  product.forEach((line,i)=>text(line,92,y+45+i*38));text(crc(q.totalMinor),1108,y+45,30,'#202126',true,true);y+=productHeight;
  box(70,y,1060,2,'#e8e9ec');text('Costo del envío · GRATIS (0%)',92,y+50,27);text(crc(q.shippingMinor),1108,y+50,30,'#202126',true,true);y+=92;
  box(70,y,1060,2,'#e8e9ec');text('Total de la compra',92,y+50,28);text(crc(q.totalMinor),1108,y+50,32,'#202126',true,true);y+=92;
- box(70,y,1060,125,'#101114');text('MONTO PAGADO · ADELANTO 20%',94,y+43,24,'#fff',true);text(crc(q.paidMinor),1106,y+94,48,'#fff',true,true);y+=150;
+ box(70,y,1060,125,'#101114');text(q.customPayment?'MONTO ABONADO':'MONTO PAGADO · ADELANTO 20%',94,y+43,24,'#fff',true);text(crc(q.paidMinor),1106,y+94,48,'#fff',true,true);y+=150;
  box(70,y,1060,90,'#fff0f1');text('SALDO PENDIENTE',94,y+56,27,'#dd1222',true);text(crc(q.balanceMinor),1106,y+56,38,'#dd1222',true,true);y+=146;
  text('El saldo pendiente se cancela al momento de la entrega personal.',70,y,26);y+=80;
  text('¡Gracias por tu compra y por confiar en PitStop!',70,y,30,'#202126',true);text('Tu adelanto nos permite encargar el repuesto para vos.',70,y+44,26,'#5f626b');
  if(q.trackingCode)text('Seguimiento: '+q.trackingCode,70,canvas.height-140,23,'#202126',true);
  box(70,canvas.height-100,1060,2,'#e8e9ec');text('PITSTOP REPUESTOS',70,canvas.height-48,23,'#202126',true);text('CALIDAD QUE TE MUEVE',1130,canvas.height-48,21,'#dd1222',true,true);
  const jpeg=await new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('No se pudo crear el PDF.')),'image/jpeg',0.95));
- return jpegPdf(new Uint8Array(await jpeg.arrayBuffer()),canvas.width,canvas.height);
+ return pdf([{bytes:new Uint8Array(await jpeg.arrayBuffer()),width:canvas.width,height:canvas.height},...await receiptTermsPages(q,logo)],1200,1697);
 }
