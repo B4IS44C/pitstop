@@ -1,4 +1,161 @@
-// outputs/pitstop/dist/multiple-pdf.js?v=20261015
+// outputs/pitstop/dist/receipt-terms.js?v=20261030
+function receiptTerms(q) {
+  const items = q.items?.length ? q.items : [q];
+  return [
+    ["GARANT\xCDA POR REPUESTO", items.map((item, i) => `${q.items?.length ? i + 1 + ". " : ""}${item.product}: ${item.warranty || "Plazo no registrado; aplica la garant\xEDa legal"}.`).join("\n")],
+    ["1. Plazo y comienzo", "El plazo indicado corresponde a la cotizaci\xF3n y se cuenta desde la entrega efectiva del repuesto, no desde el adelanto. Se respeta el m\xEDnimo legal de 30 d\xEDas h\xE1biles; si se ofreci\xF3 un plazo mayor, prevalece el mayor."],
+    ["2. Cobertura y revisi\xF3n", "La garant\xEDa comercial cubre defectos de fabricaci\xF3n. Todos los repuestos se entregan revisados y verificados en funcionamiento por PitStop. Esta revisi\xF3n no elimina la cobertura por defectos que se manifiesten despu\xE9s de la entrega ni los derechos legales del consumidor."],
+    ["3. Da\xF1os no cubiertos", "No cubre da\xF1os causados por manipulaci\xF3n del cliente o de terceros, golpes, instalaci\xF3n incorrecta, uso indebido, modificaciones o uso contrario a las especificaciones. La exclusi\xF3n debe corresponder a la causa del da\xF1o; instalar o manipular normalmente el repuesto no anula por s\xED solo la garant\xEDa."],
+    ["4. Compatibilidad e instalaci\xF3n", "Verific\xE1 la referencia, modelo y especificaciones antes de instalar. Se recomienda instalaci\xF3n por personal competente y seguir las indicaciones del fabricante. Si not\xE1s una anomal\xEDa, suspend\xE9 el uso y contactanos antes de intervenir la pieza."],
+    ["5. Solicitud de garant\xEDa", "Contact\xE1 a PitStop al +506 8865-8421 o pitstoprepuestoscr@gmail.com. Indic\xE1 el n\xFAmero de comprobante, repuesto y descripci\xF3n de la falla; aport\xE1 fotos o videos cuando sea posible. Coordinaremos la recepci\xF3n y evaluaci\xF3n del producto y la soluci\xF3n que corresponda conforme a la normativa aplicable."],
+    ["6. Pago, entrega y comprobante", "El monto recibido y el saldo pendiente son los indicados en este comprobante. El saldo se cancela al entregar, salvo acuerdo distinto documentado. El env\xEDo indicado es gratuito. Las fechas de llegada son estimadas; cualquier cambio se comunicar\xE1 al cliente. Este comprobante acredita el pago y no sustituye el documento fiscal que corresponda."],
+    ["7. Derechos del cliente", "Estas condiciones no limitan los derechos irrenunciables del consumidor, la garant\xEDa legal ni las soluciones que correspondan por incumplimiento. No constituyen una renuncia a reclamar por falta de conformidad o defectos del producto."]
+  ];
+}
+async function receiptTermsPages(q, logo) {
+  const pages = [];
+  let canvas, c, y;
+  function page() {
+    canvas = document.createElement("canvas");
+    canvas.width = 1200;
+    canvas.height = 1697;
+    c = canvas.getContext("2d");
+    c.fillStyle = "#fff";
+    c.fillRect(0, 0, 1200, 1697);
+    c.fillStyle = "#101114";
+    c.fillRect(0, 0, 1200, 190);
+    c.drawImage(logo, 45, 0, 180, 180);
+    c.fillStyle = "#fff";
+    c.font = "bold 32px Arial";
+    c.fillText("T\xC9RMINOS Y CONDICIONES", 270, 85);
+    c.font = "23px Arial";
+    c.fillText("Comprobante " + q.number, 270, 130);
+    c.fillStyle = "#dd1222";
+    c.fillRect(0, 190, 1200, 8);
+    y = 255;
+  }
+  async function finish() {
+    c.fillStyle = "#667080";
+    c.font = "20px Arial";
+    c.fillText("PITSTOP REPUESTOS \xB7 Condiciones de venta y garant\xEDa", 70, 1640);
+    const b = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.95));
+    pages.push(new Uint8Array(await b.arrayBuffer()));
+  }
+  function wrap(s) {
+    c.font = "22px Arial";
+    const lines = [];
+    for (const paragraph of s.split("\n")) {
+      let line = "";
+      for (const word of paragraph.split(/\s+/)) {
+        const next = line ? line + " " + word : word;
+        if (c.measureText(next).width <= 1060) {
+          line = next;
+          continue;
+        }
+        if (line) lines.push(line);
+        line = "";
+        for (const ch of word) {
+          if (c.measureText(line + ch).width > 1060) {
+            lines.push(line);
+            line = "";
+          }
+          line += ch;
+        }
+      }
+      if (line) lines.push(line);
+    }
+    return lines;
+  }
+  page();
+  for (const [heading, body] of receiptTerms(q)) {
+    const lines = wrap(body);
+    if (y + 100 > 1550) {
+      await finish();
+      page();
+    }
+    c.fillStyle = "#d9142c";
+    c.font = "bold 26px Arial";
+    c.fillText(heading, 70, y);
+    y += 34;
+    for (const line of lines) {
+      if (y > 1540) {
+        await finish();
+        page();
+      }
+      c.fillStyle = "#292d35";
+      c.font = "22px Arial";
+      c.fillText(line, 70, y);
+      y += 29;
+    }
+    y += 17;
+  }
+  await finish();
+  pages.push(await signaturePage(q, logo));
+  return pages;
+}
+async function signaturePage(q, logo) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1200;
+  canvas.height = 1697;
+  const c = canvas.getContext("2d");
+  c.fillStyle = "#fff";
+  c.fillRect(0, 0, 1200, 1697);
+  c.fillStyle = "#101114";
+  c.fillRect(0, 0, 1200, 190);
+  c.drawImage(logo, 45, 0, 180, 180);
+  function text(s, y, size = 25, color = "#292d35") {
+    c.fillStyle = color;
+    c.font = `${size}px Arial`;
+    c.fillText(s, 70, y);
+  }
+  c.fillStyle = "#fff";
+  c.font = "bold 30px Arial";
+  c.fillText("ACEPTACI\xD3N Y PAGO FINAL", 270, 85);
+  c.font = "23px Arial";
+  c.fillText("Comprobante " + q.number, 270, 130);
+  c.fillStyle = "#dd1222";
+  c.fillRect(0, 190, 1200, 8);
+  const money2 = (n) => new Intl.NumberFormat("es-CR", { style: "currency", currency: q.currency || "CRC" }).format(Number(n || 0) / 100);
+  text("Completar al entregar el pedido y recibir el pago final.", 260, 27);
+  text("Cliente: " + (q.customerName || "________________________________"), 320);
+  text("Tel\xE9fono: " + (q.customerPhone || "_______________________________"), 365);
+  text("Identificaci\xF3n: ___________________________________________", 420);
+  text("Fecha de entrega: _________________________________________", 475);
+  text("ACEPTACI\xD3N DE CONDICIONES", 565, 28, "#d9142c");
+  [
+    "Declaro que recib\xED y le\xED los t\xE9rminos y condiciones adjuntos, incluyendo",
+    "el plazo de garant\xEDa de cada repuesto, su cobertura y exclusiones.",
+    "Acepto estas condiciones sin renunciar a mis derechos legales.",
+    "La garant\xEDa comienza en la fecha de entrega efectiva registrada arriba."
+  ].forEach((s, i) => text(s, 615 + i * 36));
+  text("CONSTANCIA DE CANCELACI\xD3N DEL SALDO", 820, 28, "#d9142c");
+  text("Total del pedido: " + money2(q.totalMinor), 875);
+  text("Pagos registrados en este comprobante: " + money2(q.paidMinor ?? q.advanceMinor), 920);
+  text("Saldo por cancelar antes de la entrega: " + money2(q.balanceMinor), 965);
+  text("Monto recibido en la entrega: ______________________________", 1030);
+  text("Fecha / medio de pago / referencia: ________________________", 1080);
+  text("Saldo restante despu\xE9s de este pago: _______________________", 1130);
+  text("PitStop confirma la cancelaci\xF3n total \xFAnicamente si el saldo restante", 1195, 23);
+  text("es cero y su representante firma esta constancia de pago.", 1230, 23);
+  c.strokeStyle = "#667080";
+  c.lineWidth = 2;
+  c.beginPath();
+  c.moveTo(70, 1390);
+  c.lineTo(540, 1390);
+  c.moveTo(660, 1390);
+  c.lineTo(1130, 1390);
+  c.stroke();
+  text("Firma del cliente", 1430);
+  c.fillText("Firma de quien recibe \xB7 PitStop", 660, 1430);
+  text("Nombre: ______________________", 1485, 22);
+  c.fillText("Nombre: ______________________", 660, 1485);
+  text("Esta hoja sin completar ni firmar no acredita el pago del saldo.", 1570, 22, "#667080");
+  text("PITSTOP REPUESTOS \xB7 Gracias por tu confianza.", 1640, 20, "#667080");
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.95));
+  return new Uint8Array(await blob.arrayBuffer());
+}
+
+// outputs/pitstop/dist/multiple-pdf.js?v=20261030
 async function multiplePaymentPdf(q) {
   const logo = new Image();
   logo.src = new URL("./assets/logo.jpeg", import.meta.url).href;
@@ -94,6 +251,7 @@ async function multiplePaymentPdf(q) {
   text("El saldo se cancela al momento de la entrega personal.", 85, y + 15, 24);
   text("Llegada estimada: " + q.arrival, 85, y + 58, 24);
   await finish();
+  pages.push(...await receiptTermsPages(q, logo));
   return pdf(pages, W, H);
 }
 function pdf(pages, width, height) {
@@ -113,17 +271,20 @@ endobj
   add("%PDF-1.4\n");
   obj(1, "<< /Type /Catalog /Pages 2 0 R >>");
   obj(2, `<< /Type /Pages /Kids [${pages.map((_, i) => `${3 + i * 3} 0 R`).join(" ")}] /Count ${pages.length} >>`);
-  pages.forEach((bytes, i) => {
+  pages.forEach((entry, i) => {
+    const bytes = entry.bytes || entry, w = entry.width || width, h = entry.height || height;
     const p = 3 + i * 3;
     obj(p, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /XObject << /Im0 ${p + 1} 0 R >> >> /Contents ${p + 2} 0 R >>`);
     offsets[p + 1] = size;
     add(`${p + 1} 0 obj
-<< /Type /XObject /Subtype /Image /Width ${width} /Height ${height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${bytes.length} >>
+<< /Type /XObject /Subtype /Image /Width ${w} /Height ${h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${bytes.length} >>
 stream
 `);
     add(bytes);
     add("\nendstream\nendobj\n");
-    const content = "q 595.28 0 0 841.89 0 0 cm /Im0 Do Q\n";
+    const scale = Math.min(595.28 / w, 841.89 / h), pw = w * scale, ph = h * scale;
+    const content = `q ${pw} 0 0 ${ph} ${(595.28 - pw) / 2} ${841.89 - ph} cm /Im0 Do Q
+`;
     obj(p + 2, `<< /Length ${content.length} >>
 stream
 ${content}endstream`);
@@ -143,49 +304,6 @@ ${x}
 }
 
 // outputs/pitstop/dist/payment-pdf.js?v=20261015
-function jpegPdf(jpeg, width, height) {
-  const enc = new TextEncoder(), parts = [], offsets = [0];
-  let length = 0;
-  const add = (value) => {
-    const bytes = typeof value === "string" ? enc.encode(value) : value;
-    parts.push(bytes);
-    length += bytes.length;
-  };
-  const obj = (n, value) => {
-    offsets[n] = length;
-    add(`${n} 0 obj
-${value}
-endobj
-`);
-  };
-  add("%PDF-1.4\n");
-  obj(1, "<< /Type /Catalog /Pages 2 0 R >>");
-  obj(2, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
-  obj(3, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>");
-  offsets[4] = length;
-  add(`4 0 obj
-<< /Type /XObject /Subtype /Image /Width ${width} /Height ${height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpeg.length} >>
-stream
-`);
-  add(jpeg);
-  add("\nendstream\nendobj\n");
-  const scale = Math.min(595.28 / width, 841.89 / height), w = width * scale, h = height * scale;
-  const content = `q ${w.toFixed(3)} 0 0 ${h.toFixed(3)} ${((595.28 - w) / 2).toFixed(3)} ${(841.89 - h).toFixed(3)} cm /Im0 Do Q
-`;
-  obj(5, `<< /Length ${enc.encode(content).length} >>
-stream
-${content}endstream`);
-  const start2 = length;
-  add("xref\n0 6\n0000000000 65535 f \n");
-  for (let i = 1; i <= 5; i++) add(String(offsets[i]).padStart(10, "0") + " 00000 n \n");
-  add(`trailer
-<< /Size 6 /Root 1 0 R >>
-startxref
-${start2}
-%%EOF
-`);
-  return new Blob(parts, { type: "application/pdf" });
-}
 async function paymentPdf(q) {
   const crc = (value) => q.currency === "USD" ? "US$ " + new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value / 100) : "\u20A1" + new Intl.NumberFormat("es-CR", { maximumFractionDigits: 2 }).format(value / 100);
   if (q.items?.length) return multiplePaymentPdf(q);
@@ -279,7 +397,7 @@ async function paymentPdf(q) {
   text("PITSTOP REPUESTOS", 70, canvas.height - 48, 23, "#202126", true);
   text("CALIDAD QUE TE MUEVE", 1130, canvas.height - 48, 21, "#dd1222", true, true);
   const jpeg = await new Promise((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("No se pudo crear el PDF.")), "image/jpeg", 0.95));
-  return jpegPdf(new Uint8Array(await jpeg.arrayBuffer()), canvas.width, canvas.height);
+  return pdf([{ bytes: new Uint8Array(await jpeg.arrayBuffer()), width: canvas.width, height: canvas.height }, ...await receiptTermsPages(q, logo)], 1200, 1697);
 }
 
 // outputs/pitstop/dist/receipt-file.js
@@ -596,6 +714,103 @@ function initSalesSearch({ call, checkSeller: checkSeller2, context }) {
     search(true);
   });
   $2("sales-search-more").addEventListener("click", () => search(false));
+}
+
+// outputs/pitstop/dist/payment-pdf.js?v=20261029
+async function paymentPdf2(q) {
+  const crc = (value) => q.currency === "USD" ? "US$ " + new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value / 100) : "\u20A1" + new Intl.NumberFormat("es-CR", { maximumFractionDigits: 2 }).format(value / 100);
+  if (q.items?.length) return multiplePaymentPdf(q);
+  const logo = new Image();
+  logo.src = new URL("./assets/logo.jpeg", import.meta.url).href;
+  await logo.decode();
+  const canvas = document.createElement("canvas");
+  canvas.width = 1200;
+  const c = canvas.getContext("2d");
+  const font = (size, bold = false) => {
+    c.font = `${bold ? "700" : "400"} ${size}px Arial, sans-serif`;
+  };
+  function wrap(value, width, size = 28) {
+    font(size);
+    const lines = [];
+    let line = "";
+    for (const word of String(value).replace(/\s+/g, " ").trim().split(" ")) {
+      const next = line ? line + " " + word : word;
+      if (c.measureText(next).width <= width) {
+        line = next;
+        continue;
+      }
+      if (line) lines.push(line);
+      line = "";
+      for (const char of word) {
+        if (c.measureText(line + char).width > width) {
+          lines.push(line);
+          line = "";
+        }
+        line += char;
+      }
+    }
+    if (line) lines.push(line);
+    return lines;
+  }
+  const product = wrap(q.product, 700), name = wrap(q.customerName || "Cliente", 1060, 30), productHeight = Math.max(110, product.length * 38 + 46), nameHeight = name.length * 38;
+  canvas.height = Math.max(1697, 1350 + productHeight + nameHeight);
+  const box = (x, y2, w, h, color) => {
+    c.fillStyle = color;
+    c.fillRect(x, y2, w, h);
+  };
+  const text = (value, x, y2, size = 28, color = "#202126", bold = false, right = false) => {
+    font(size, bold);
+    c.fillStyle = color;
+    c.textAlign = right ? "right" : "left";
+    c.fillText(value, x, y2);
+  };
+  box(0, 0, 1200, canvas.height, "#fff");
+  box(0, 0, 1200, 290, "#090a0c");
+  box(0, 290, 1200, 12, "#e20a18");
+  c.drawImage(logo, 46, 8, 280, 280);
+  text("COMPROBANTE DE PAGO", 1130, 100, 43, "#fff", true, true);
+  text(q.number, 1130, 158, 28, "#fff", true, true);
+  const date = new Intl.DateTimeFormat("es-CR", { timeZone: "America/Costa_Rica", day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(q.issuedAt));
+  text("Fecha: " + date, 1130, 210, 25, "#c4c6cc", false, true);
+  text("RECIBIDO DE", 70, 365, 22, "#dd1222", true);
+  name.forEach((line, i) => text(line, 70, 411 + i * 38, 30, "#202126", true));
+  let y = 420 + nameHeight;
+  const phone = String(q.customerPhone).replace(/^\+?/, "+");
+  text("Tel\xE9fono: " + phone, 70, y, 26, "#5f626b");
+  y += 60;
+  box(70, y, 1060, 62, "#dd1222");
+  text("DESCRIPCI\xD3N", 92, y + 41, 23, "#fff", true);
+  text("IMPORTE", 1108, y + 41, 23, "#fff", true, true);
+  y += 62;
+  product.forEach((line, i) => text(line, 92, y + 45 + i * 38));
+  text(crc(q.totalMinor), 1108, y + 45, 30, "#202126", true, true);
+  y += productHeight;
+  box(70, y, 1060, 2, "#e8e9ec");
+  text("Costo del env\xEDo \xB7 GRATIS (0%)", 92, y + 50, 27);
+  text(crc(q.shippingMinor), 1108, y + 50, 30, "#202126", true, true);
+  y += 92;
+  box(70, y, 1060, 2, "#e8e9ec");
+  text("Total de la compra", 92, y + 50, 28);
+  text(crc(q.totalMinor), 1108, y + 50, 32, "#202126", true, true);
+  y += 92;
+  box(70, y, 1060, 125, "#101114");
+  text(q.customPayment ? "MONTO ABONADO" : "MONTO PAGADO \xB7 ADELANTO 20%", 94, y + 43, 24, "#fff", true);
+  text(crc(q.paidMinor), 1106, y + 94, 48, "#fff", true, true);
+  y += 150;
+  box(70, y, 1060, 90, "#fff0f1");
+  text("SALDO PENDIENTE", 94, y + 56, 27, "#dd1222", true);
+  text(crc(q.balanceMinor), 1106, y + 56, 38, "#dd1222", true, true);
+  y += 146;
+  text("El saldo pendiente se cancela al momento de la entrega personal.", 70, y, 26);
+  y += 80;
+  text("\xA1Gracias por tu compra y por confiar en PitStop!", 70, y, 30, "#202126", true);
+  text("Tu adelanto nos permite encargar el repuesto para vos.", 70, y + 44, 26, "#5f626b");
+  if (q.trackingCode) text("Seguimiento: " + q.trackingCode, 70, canvas.height - 140, 23, "#202126", true);
+  box(70, canvas.height - 100, 1060, 2, "#e8e9ec");
+  text("PITSTOP REPUESTOS", 70, canvas.height - 48, 23, "#202126", true);
+  text("CALIDAD QUE TE MUEVE", 1130, canvas.height - 48, 21, "#dd1222", true, true);
+  const jpeg = await new Promise((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("No se pudo crear el PDF.")), "image/jpeg", 0.95));
+  return pdf([{ bytes: new Uint8Array(await jpeg.arrayBuffer()), width: canvas.width, height: canvas.height }, ...await receiptTermsPages(q, logo)], 1200, 1697);
 }
 
 // outputs/pitstop/dist/quotation-image.js?v=20261002c
@@ -1224,7 +1439,7 @@ async function downloadPaymentPdf() {
   $("download-receipt-pdf").disabled = true;
   $("receipt-pdf-status").textContent = "Preparando comprobante PDF\u2026";
   try {
-    paymentPdfBlob ??= await paymentPdf(lastPaymentDocument);
+    paymentPdfBlob ??= await paymentPdf2(lastPaymentDocument);
     const url = URL.createObjectURL(paymentPdfBlob), link = document.createElement("a");
     link.href = url;
     link.download = "PitStop-" + lastPaymentDocument.number + ".pdf";
