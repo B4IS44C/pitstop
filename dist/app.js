@@ -967,15 +967,23 @@ var lastResult;
 var sellerDay;
 var saleBusy = false;
 var today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Costa_Rica", year: "numeric", month: "2-digit", day: "2-digit" }).format(/* @__PURE__ */ new Date());
-var sellers = ["Jean", "Isaac", "Esteban"];
-try {
-  const saved = JSON.parse(localStorage.getItem("pitstop-seller") || "null");
-  const name = saved?.name?.toLowerCase() === "lija" ? "Esteban" : sellers.find((n) => n.toLowerCase() === saved?.name?.toLowerCase());
-  if (name) {
-    $("seller").value = name;
-    sellerDay = today();
+var sellers = [];
+async function loadSellers() {
+  const { data } = await api("ownerSellers")({ action: "list" });
+  sellers = data.names;
+  const select = $("seller");
+  select.replaceChildren(new Option("Selecciona vendedor", ""));
+  for (const name of sellers) select.add(new Option(name, name));
+  try {
+    const saved = JSON.parse(localStorage.getItem("pitstop-seller") || "null");
+    const name = saved?.name?.toLowerCase() === "lija" ? "Esteban" : sellers.find((n) => n.toLowerCase() === saved?.name?.toLowerCase());
+    if (name) {
+      select.value = name;
+      sellerDay = today();
+    }
+  } catch {
   }
-} catch {
+  select.disabled = false;
 }
 function checkSeller() {
   if (!sellers.includes($("seller").value)) {
@@ -1283,6 +1291,7 @@ async function start() {
     await authentication.signInAnonymously(auth);
     const backend = functions.getFunctions(firebase, region);
     api = (name) => functions.httpsCallable(backend, name);
+    await loadSellers();
     $("fields").disabled = false;
     $("calculate").disabled = false;
     $("search-button").disabled = false;
