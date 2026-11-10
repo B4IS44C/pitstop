@@ -15,15 +15,15 @@ function initPresence(call) {
   let ready = false, state = { status: "offline" }, busy = false, offset = 0, reg, timer, chain = Promise.resolve();
   const box = document.createElement("section");
   box.className = "presence-panel";
-  box.innerHTML = '<div><label for="seller-presence">Tu estado</label><select id="seller-presence" disabled><option value="offline">\u26AB Offline</option><option value="online">\u{1F7E2} Online</option><option value="lunch">\u{1F7E1} Almuerzo</option></select></div><div><p id="presence-note" role="status">Iniciando registro\u2026</p><button type="button" id="presence-notifications">Activar avisos de actividad</button></div><div id="presence-confirm" hidden role="alert"><strong>Hola, \xBFa\xFAn te encuentras en l\xEDnea?</strong><p id="presence-countdown"></p><button type="button" id="presence-yes">S\xED, sigo en l\xEDnea</button></div>';
+  box.innerHTML = '<div><label for="seller-presence">Tu estado</label><select id="seller-presence" disabled><option value="offline">\u26AB Offline</option><option value="online">\u{1F7E2} Online</option><option value="lunch">\u{1F7E1} Almuerzo</option></select></div><div><p id="presence-note" role="status"></p><button type="button" id="presence-notifications">Activar notificaciones</button></div><div id="presence-confirm" hidden role="alert"><strong>Hola, \xBFa\xFAn te encuentras en l\xEDnea?</strong><p id="presence-countdown"></p><button type="button" id="presence-yes">S\xED, sigo en l\xEDnea</button></div>';
   document.querySelector(".seller-panel").after(box);
   function draw() {
     const now = Date.now() + offset, waiting = state.status === "online" && state.dueAt && now >= state.dueAt;
     const expired = waiting && now >= state.dueAt + 3e5;
     $2("seller-presence").value = expired ? "offline" : state.status;
     $2("presence-confirm").hidden = !waiting || expired;
-    $2("presence-countdown").textContent = "Confirma en " + Math.max(0, Math.ceil((state.dueAt + 3e5 - now) / 6e4)) + " min. Sin respuesta, tu estado pasar\xE1 a Offline.";
-    if (expired) $2("presence-note").textContent = "Pasaste a Offline por no confirmar actividad.";
+    $2("presence-countdown").textContent = "Confirma para continuar en l\xEDnea.";
+    if (expired) $2("presence-note").textContent = "Tu estado es Offline.";
   }
   function send(action, extra = {}) {
     const seller = $2("seller").value;
@@ -49,14 +49,17 @@ function initPresence(call) {
     }
     try {
       await send(action);
-      $2("presence-note").textContent = action === "start" ? "Al usar la app, tu estado se ha cambiado a Online." : state.status === "online" ? "Online \xB7 cada c\xE1lculo guardado reinicia los 30 minutos." : state.status === "lunch" ? "Almuerzo \xB7 avisos suspendidos." : "Offline \xB7 no se registra tiempo en l\xEDnea.";
+      $2("presence-note").textContent = action === "start" ? "Al usar la app, tu estado se ha cambiado a Online." : "";
     } catch (e) {
       $2("presence-note").textContent = "No se confirm\xF3 el cambio. Revisa la conexi\xF3n.";
       draw();
     }
   }
   $2("seller-presence").onchange = () => change($2("seller-presence").value);
-  $2("seller").addEventListener("change", () => change("offline"));
+  $2("seller").addEventListener("change", async () => {
+    await change("offline");
+    await restoreNotifications();
+  });
   $2("presence-yes").onclick = () => change("confirm");
   for (const id of ["product", "cost", "weight", "quote-phone", "product-url", "product-url-2"]) $2(id).addEventListener("input", () => {
     if (ready && (state.status !== "online" || Date.now() + offset >= state.dueAt + 3e5) && !busy && $2("seller").value) {
@@ -65,6 +68,8 @@ function initPresence(call) {
     }
   });
   $2("presence-notifications").onclick = async () => {
+    const button = $2("presence-notifications");
+    button.disabled = true;
     try {
       if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) throw Error("En iPhone, agrega la calculadora a Inicio y \xE1brela desde all\xED para activar avisos.");
       if (!ready || !$2("seller").value) throw Error("Selecciona tu vendedor primero.");
@@ -75,11 +80,27 @@ function initPresence(call) {
       const key = Uint8Array.from(atob(state.publicKey.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
       const sub = await reg.pushManager.getSubscription() || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
       await send("subscribe", { subscription: sub.toJSON() });
-      $2("presence-note").textContent = "Avisos activados en este dispositivo.";
+      button.hidden = true;
+      $2("presence-note").textContent = "";
     } catch (e) {
       $2("presence-note").textContent = e.message;
+    } finally {
+      button.disabled = false;
     }
   };
+  async function restoreNotifications() {
+    if (!ready || !$2("seller").value || !("Notification" in window) || window.Notification.permission !== "granted" || !navigator.serviceWorker) return;
+    try {
+      const registration = await navigator.serviceWorker.getRegistration();
+      const subscription = await registration?.pushManager.getSubscription();
+      if (subscription) {
+        await send("subscribe", { subscription: subscription.toJSON() });
+        $2("presence-notifications").hidden = true;
+      }
+    } catch {
+      $2("presence-notifications").hidden = false;
+    }
+  }
   navigator.serviceWorker?.addEventListener("message", () => {
     if (ready) send("get").catch(() => {
     });
@@ -99,12 +120,13 @@ function initPresence(call) {
     await send("reset");
     ready = true;
     $2("seller-presence").disabled = false;
-    $2("presence-note").textContent = "Offline \xB7 selecciona Online o comienza una cotizaci\xF3n.";
+    $2("presence-note").textContent = "";
+    await restoreNotifications();
     timer = setInterval(poll, 3e4);
     setInterval(draw, 1e3);
   }, async calculated() {
     await poll();
-    $2("presence-note").textContent = "Online \xB7 c\xE1lculo guardado; contador reiniciado.";
+    $2("presence-note").textContent = "";
   } };
 }
 

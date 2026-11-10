@@ -1,1 +1,12 @@
-.presence-panel{display:grid;grid-template-columns:minmax(150px,220px) 1fr;gap:18px;padding:20px;margin:18px 0;border:1px solid #5555;border-radius:18px;background:var(--surface,#171d27);color:inherit}.presence-panel select{width:100%;min-height:46px}.presence-panel p{font-size:13px;line-height:1.6;margin:0 0 10px}.presence-panel button{padding:10px 16px;min-height:44px;border-radius:10px;cursor:pointer}.presence-panel #presence-confirm{grid-column:1/-1;padding:20px;background:#74162b;color:white;border-radius:12px}.presence-panel [hidden]{display:none!important}@media(max-width:600px){.presence-panel{grid-template-columns:1fr}}
+.presence-panel{display:grid;grid-template-columns:minmax(180px,280px) 1fr;align-items:center;gap:20px;padding:22px 26px;margin:18px 0;border:1px solid var(--line,#e0e2e6);border-radius:14px;background:var(--surface,#fff);color:var(--ink,#202126)}
+.presence-panel label{display:block;font-size:14px;font-weight:600;margin-bottom:10px}
+.presence-panel select{width:100%;min-height:50px;padding:13px 16px;font:inherit;font-size:16px;border:1px solid var(--line,#d5d8df);border-radius:8px;background:var(--input,#f8f9fb);color:var(--ink,#202126);color-scheme:inherit;cursor:pointer}
+.presence-panel p{font-size:13px;line-height:1.6;margin:0 0 10px;color:var(--subtle,#64666f)}
+.presence-panel p:empty{display:none}
+.presence-panel button{font:600 14px Inter,Arial,sans-serif;padding:13px 20px;min-height:48px;border:1px solid var(--red,#dd1222);border-radius:9px;background:var(--red,#dd1222);color:#fff;cursor:pointer;transition:filter .15s}
+.presence-panel button:hover{filter:brightness(.92)}
+.presence-panel select:focus-visible,.presence-panel button:focus-visible{outline:2px solid var(--red,#dd1222);outline-offset:3px}
+.presence-panel #presence-confirm{grid-column:1/-1;padding:18px;border:1px solid var(--line,#e0e2e6);border-left:3px solid var(--red,#dd1222);background:var(--input,#f8f9fb);border-radius:9px}
+.presence-panel #presence-confirm strong{display:block;margin-bottom:8px}
+.presence-panel [hidden]{display:none!important}
+@media(max-width:600px){.presence-panel{grid-template-columns:1fr;padding:20px;gap:16px}.presence-panel button{width:100%}}
