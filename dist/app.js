@@ -1,3 +1,113 @@
+// outputs/pitstop/dist/presence-ui.js
+function initPresence(call) {
+  const $2 = (id) => document.getElementById(id);
+  let device;
+  try {
+    device = sessionStorage.getItem("pitstop-presence-device");
+    if (!device) {
+      device = crypto.randomUUID();
+      sessionStorage.setItem("pitstop-presence-device", device);
+    }
+  } catch {
+    device = crypto.randomUUID();
+  }
+  const run = crypto.randomUUID();
+  let ready = false, state = { status: "offline" }, busy = false, offset = 0, reg, timer, chain = Promise.resolve();
+  const box = document.createElement("section");
+  box.className = "presence-panel";
+  box.innerHTML = '<div><label for="seller-presence">Tu estado</label><select id="seller-presence" disabled><option value="offline">\u26AB Offline</option><option value="online">\u{1F7E2} Online</option><option value="lunch">\u{1F7E1} Almuerzo</option></select></div><div><p id="presence-note" role="status">Iniciando registro\u2026</p><button type="button" id="presence-notifications">Activar avisos de actividad</button></div><div id="presence-confirm" hidden role="alert"><strong>Hola, \xBFa\xFAn te encuentras en l\xEDnea?</strong><p id="presence-countdown"></p><button type="button" id="presence-yes">S\xED, sigo en l\xEDnea</button></div>';
+  document.querySelector(".seller-panel").after(box);
+  function draw() {
+    const now = Date.now() + offset, waiting = state.status === "online" && state.dueAt && now >= state.dueAt;
+    const expired = waiting && now >= state.dueAt + 3e5;
+    $2("seller-presence").value = expired ? "offline" : state.status;
+    $2("presence-confirm").hidden = !waiting || expired;
+    $2("presence-countdown").textContent = "Confirma en " + Math.max(0, Math.ceil((state.dueAt + 3e5 - now) / 6e4)) + " min. Sin respuesta, tu estado pasar\xE1 a Offline.";
+    if (expired) $2("presence-note").textContent = "Pasaste a Offline por no confirmar actividad.";
+  }
+  function send(action, extra = {}) {
+    const seller = $2("seller").value;
+    const job = async () => {
+      const { data } = await call("sellerPresence", { device, run, seller, action, ...extra });
+      state = data;
+      offset = data.serverNow - Date.now();
+      draw();
+      if (action !== "get") navigator.serviceWorker?.controller?.postMessage({ type: "presence-resolved" });
+      return data;
+    };
+    const result = chain.then(job);
+    chain = result.catch(() => {
+    });
+    return result;
+  }
+  async function change(action) {
+    if (!ready) return;
+    if (!$2("seller").value && action !== "offline") {
+      draw();
+      $2("presence-note").textContent = "Selecciona tu vendedor primero.";
+      return;
+    }
+    try {
+      await send(action);
+      $2("presence-note").textContent = action === "start" ? "Al usar la app, tu estado se ha cambiado a Online." : state.status === "online" ? "Online \xB7 cada c\xE1lculo guardado reinicia los 30 minutos." : state.status === "lunch" ? "Almuerzo \xB7 avisos suspendidos." : "Offline \xB7 no se registra tiempo en l\xEDnea.";
+    } catch (e) {
+      $2("presence-note").textContent = "No se confirm\xF3 el cambio. Revisa la conexi\xF3n.";
+      draw();
+    }
+  }
+  $2("seller-presence").onchange = () => change($2("seller-presence").value);
+  $2("seller").addEventListener("change", () => change("offline"));
+  $2("presence-yes").onclick = () => change("confirm");
+  for (const id of ["product", "cost", "weight", "quote-phone", "product-url", "product-url-2"]) $2(id).addEventListener("input", () => {
+    if (ready && (state.status !== "online" || Date.now() + offset >= state.dueAt + 3e5) && !busy && $2("seller").value) {
+      busy = true;
+      change("start").finally(() => busy = false);
+    }
+  });
+  $2("presence-notifications").onclick = async () => {
+    try {
+      if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) throw Error("En iPhone, agrega la calculadora a Inicio y \xE1brela desde all\xED para activar avisos.");
+      if (!ready || !$2("seller").value) throw Error("Selecciona tu vendedor primero.");
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") throw Error("Permite notificaciones en los ajustes de tu navegador.");
+      reg = await navigator.serviceWorker.register("./presence-sw.js");
+      await navigator.serviceWorker.ready;
+      const key = Uint8Array.from(atob(state.publicKey.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
+      const sub = await reg.pushManager.getSubscription() || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+      await send("subscribe", { subscription: sub.toJSON() });
+      $2("presence-note").textContent = "Avisos activados en este dispositivo.";
+    } catch (e) {
+      $2("presence-note").textContent = e.message;
+    }
+  };
+  navigator.serviceWorker?.addEventListener("message", () => {
+    if (ready) send("get").catch(() => {
+    });
+  });
+  async function poll() {
+    if (!ready) return;
+    try {
+      await send("get");
+    } catch {
+      if (document.visibilityState === "visible") $2("presence-note").textContent = "Sin conexi\xF3n: no se pudo verificar el estado.";
+    }
+  }
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") poll();
+  });
+  return { context: () => ({ device, run }), async prepare() {
+    await send("reset");
+    ready = true;
+    $2("seller-presence").disabled = false;
+    $2("presence-note").textContent = "Offline \xB7 selecciona Online o comienza una cotizaci\xF3n.";
+    timer = setInterval(poll, 3e4);
+    setInterval(draw, 1e3);
+  }, async calculated() {
+    await poll();
+    $2("presence-note").textContent = "Online \xB7 c\xE1lculo guardado; contador reiniciado.";
+  } };
+}
+
 // outputs/pitstop/dist/deposit.js
 function depositMinor(total, currency = "CRC", percent = 30) {
   if (!Number.isSafeInteger(total) || total <= 0 || !["CRC", "USD"].includes(currency) || ![20, 30].includes(percent)) throw new Error("Adelanto inv\xE1lido");
@@ -967,6 +1077,7 @@ var lastResult;
 var sellerDay;
 var saleBusy = false;
 var today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Costa_Rica", year: "numeric", month: "2-digit", day: "2-digit" }).format(/* @__PURE__ */ new Date());
+var presence = initPresence((name, data) => api(name)(data));
 var sellers = [];
 async function loadSellers() {
   const { data } = await api("ownerSellers")({ action: "list" });
@@ -1258,7 +1369,8 @@ $("calculator-form").addEventListener("submit", async (e) => {
   $("calculate").textContent = "Calculando\u2026";
   clearResult();
   try {
-    const { data } = await api("calculate")({ ...JSON.parse(payload), requestId });
+    const { data } = await api("calculate")({ ...JSON.parse(payload), requestId, presence: presence.context() });
+    await presence.calculated();
     renderResult(data);
     notice("Tu cotizaci\xF3n est\xE1 lista.");
     requestId = void 0;
@@ -1292,6 +1404,7 @@ async function start() {
     const backend = functions.getFunctions(firebase, region);
     api = (name) => functions.httpsCallable(backend, name);
     await loadSellers();
+    await presence.prepare();
     $("fields").disabled = false;
     $("calculate").disabled = false;
     $("search-button").disabled = false;

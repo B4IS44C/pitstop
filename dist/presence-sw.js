@@ -1,0 +1,4 @@
+self.addEventListener('push',event=>{let data;try{data=event.data.json();}catch{return;}event.waitUntil(self.registration.showNotification(data.title||'PitStop',{body:data.body,tag:'pitstop-presence',icon:'./assets/logo.jpeg',data:{url:new URL('./',self.registration.scope).href},requireInteraction:true}));});
+self.addEventListener('notificationclick',event=>{event.notification.close();event.waitUntil((async()=>{const tabs=await self.clients.matchAll({type:'window',includeUncontrolled:true});for(const tab of tabs)if(tab.url.startsWith(self.registration.scope)){await tab.focus();tab.postMessage({type:'presence-check'});return;}await self.clients.openWindow(self.registration.scope);})());});
+
+self.addEventListener('message',event=>{if(event.data?.type==='presence-resolved')event.waitUntil(self.registration.getNotifications({tag:'pitstop-presence'}).then(items=>items.forEach(n=>n.close())));});
