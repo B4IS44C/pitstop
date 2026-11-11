@@ -131,7 +131,7 @@ function initPresence(call) {
 }
 
 // outputs/pitstop/dist/deposit.js
-function depositMinor(total, currency = "CRC", percent = 30) {
+function depositMinor(total, currency = "CRC", percent = 20) {
   if (!Number.isSafeInteger(total) || total <= 0 || !["CRC", "USD"].includes(currency) || ![20, 30].includes(percent)) throw new Error("Adelanto inv\xE1lido");
   const n = BigInt(total) * BigInt(percent);
   return Math.min(total, Number(currency === "USD" ? (n + 50n) / 100n : (n + 9999999n) / 10000000n * 100000n));
@@ -558,7 +558,7 @@ function initMultipleSale({ call, context = () => ({}), check = () => true, owne
   const dialog = document.createElement("dialog");
   dialog.className = "multi-dialog";
   dialog.setAttribute("aria-label", owner ? "Editar venta m\xFAltiple" : "Generar venta m\xFAltiple");
-  dialog.innerHTML = `<div class="multi-heading"><h2>${owner ? "Editar" : "Generar"} venta m\xFAltiple</h2><button type="button" data-close aria-label="Cerrar">\xD7</button></div><p>Selecciona las cotizaciones del mismo cliente. El adelanto y el saldo se suman por producto.</p><form data-search><label>Tel\xE9fono del cliente<input data-phone type="tel" required placeholder="+506 8888 8888"></label><button class="button" type="submit">Buscar cotizaciones</button></form><label>Filtrar por nombre del repuesto<input data-filter type="search" placeholder="Nombre del repuesto"></label><div data-list class="multi-list"></div><button type="button" data-more hidden>Ver m\xE1s cotizaciones</button><div data-totals class="multi-totals" aria-live="polite"></div><form data-save><fieldset data-fields><label class="payment-currency-choice"><input data-usd type="checkbox"> Pagado en d\xF3lares <small>El comprobante completo se emitir\xE1 en USD.</small></label><label class="paid-field">Monto abonado (opcional)<input data-paid inputmode="decimal" maxlength="15" placeholder="En blanco: adelanto del 30%"><small data-paid-hint>Es el total pagado, no solo la diferencia.</small></label>${owner ? "" : '<label>Nombre del cliente (opcional)<input data-name maxlength="120"></label><label>Direcci\xF3n de entrega<textarea data-address required maxlength="1000" rows="2"></textarea></label><label>Comprobante de pago (opcional)<input data-receipt type="file" accept="image/jpeg,image/png,image/webp"></label>'}<p>${owner ? "Los importes, el PDF y el seguimiento se actualizar\xE1n. Se conserva el c\xF3digo." : "Estas cotizaciones se convertir\xE1n en una sola venta aprobada."}</p><button type="submit" class="button" data-submit>${owner ? "Guardar cambios" : "Crear venta m\xFAltiple y PDF"}</button></fieldset></form><p data-status role="status"></p><div data-success hidden><label>C\xF3digo de seguimiento<input data-code readonly></label><button type="button" data-copy>Copiar c\xF3digo</button><button type="button" data-pdf>Descargar PDF nuevamente</button></div>`;
+  dialog.innerHTML = `<div class="multi-heading"><h2>${owner ? "Editar" : "Generar"} venta m\xFAltiple</h2><button type="button" data-close aria-label="Cerrar">\xD7</button></div><p>Selecciona las cotizaciones del mismo cliente. El adelanto y el saldo se suman por producto.</p><form data-search><label>Tel\xE9fono del cliente<input data-phone type="tel" required placeholder="+506 8888 8888"></label><button class="button" type="submit">Buscar cotizaciones</button></form><label>Filtrar por nombre del repuesto<input data-filter type="search" placeholder="Nombre del repuesto"></label><div data-list class="multi-list"></div><button type="button" data-more hidden>Ver m\xE1s cotizaciones</button><div data-totals class="multi-totals" aria-live="polite"></div><form data-save><fieldset data-fields><label class="payment-currency-choice"><input data-usd type="checkbox"> Pagado en d\xF3lares <small>El comprobante completo se emitir\xE1 en USD.</small></label><label class="paid-field">Monto abonado (opcional)<input data-paid inputmode="decimal" maxlength="15" placeholder="En blanco: adelanto del 20%"><small data-paid-hint>Es el total pagado, no solo la diferencia.</small></label>${owner ? "" : '<label>Nombre del cliente (opcional)<input data-name maxlength="120"></label><label>Direcci\xF3n de entrega<textarea data-address required maxlength="1000" rows="2"></textarea></label><label>Comprobante de pago (opcional)<input data-receipt type="file" accept="image/jpeg,image/png,image/webp"></label>'}<p>${owner ? "Los importes, el PDF y el seguimiento se actualizar\xE1n. Se conserva el c\xF3digo." : "Estas cotizaciones se convertir\xE1n en una sola venta aprobada."}</p><button type="submit" class="button" data-submit>${owner ? "Guardar cambios" : "Crear venta m\xFAltiple y PDF"}</button></fieldset></form><p data-status role="status"></p><div data-success hidden><label>C\xF3digo de seguimiento<input data-code readonly></label><button type="button" data-copy>Copiar c\xF3digo</button><button type="button" data-pdf>Descargar PDF nuevamente</button></div>`;
   document.body.append(dialog);
   const $2 = (s) => dialog.querySelector(s), money2 = (n) => $2("[data-usd]").checked ? "US$ " + new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n / 100) : "\u20A1" + new Intl.NumberFormat("es-CR").format(n / 100);
   let selected = /* @__PURE__ */ new Map(), rows = /* @__PURE__ */ new Map(), cursor = null, phone = "", sale = null, busy = false, requestId2, documentData;
@@ -586,7 +586,7 @@ function initMultipleSale({ call, context = () => ({}), check = () => true, owne
     const values = [...selected.values()], total = values.reduce((n, r) => n + ($2("[data-usd]").checked ? r.totalCents : r.totalMinor), 0), defaultPaid = values.reduce((n, r) => n + ($2("[data-usd]").checked ? r.paidUsdMinor : r.paidMinor), 0);
     const raw = $2("[data-paid]").value.trim().replace(",", "."), paid = raw ? Math.round(Number(raw) * 100) : defaultPaid, valid = (!raw || /^\d{1,12}(?:\.\d{1,2})?$/.test(raw)) && Number.isSafeInteger(paid) && paid >= 0 && paid <= total;
     $2("[data-paid]").setCustomValidity(valid ? "" : "El abono debe estar entre cero y el total.");
-    $2("[data-paid-hint]").textContent = "Monto total pagado en " + ($2("[data-usd]").checked ? "USD" : "CRC") + ". En blanco: 30% habitual. Sin separadores de miles.";
+    $2("[data-paid-hint]").textContent = "Monto total pagado en " + ($2("[data-usd]").checked ? "USD" : "CRC") + ". En blanco: 20% habitual. Sin separadores de miles.";
     $2("[data-totals]").textContent = !valid ? "Revisa el monto abonado." : `${values.length} seleccionadas \xB7 Total: ${money2(total)} \xB7 Abonado: ${money2(paid)} \xB7 Saldo: ${money2(total - paid)}`;
     $2("[data-submit]").disabled = busy || !valid || values.length < 2 || values.length > 20;
     $2("[data-more]").hidden = !cursor;
@@ -1070,7 +1070,7 @@ function whatsappQuotation(item) {
   const crc = (minor) => item.paymentCurrency === "USD" ? "US$ " + new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(minor / 100) : "\u20A1" + new Intl.NumberFormat("es-CR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(minor / 100);
   const message = `Perfecto, excelente. \u{1F44D}\u{1F3FB} Ya confirmamos que el repuesto es el correcto y podemos solicitarlo por encargo como pedido especial.
 
-El precio del repuesto (${product}) ser\xEDa de ${crc(total)} y para realizar el pedido se requiere un adelanto del 30% ${crc(advance)}. El restante ${crc(balance)} se cancela al momento de la entrega personal.
+El precio del repuesto (${product}) ser\xEDa de ${crc(total)} y para realizar el pedido se requiere un adelanto del 20% ${crc(advance)}. El restante ${crc(balance)} se cancela al momento de la entrega personal.
 
 \u23F1\uFE0F Tiempo estimado de llegada: 12\u201315 d\xEDas
 \u{1F6E1}\uFE0F Garant\xEDa: 1 mes
@@ -1659,7 +1659,7 @@ function updateSalePayment() {
   const raw = $("sale-paid-amount").value.trim().replace(",", "."), paid = raw ? Math.round(Number(raw) * 100) : depositMinor(total, usd ? "USD" : "CRC");
   const valid = (!raw || /^\d{1,12}(?:\.\d{1,2})?$/.test(raw)) && Number.isSafeInteger(paid) && paid >= 0 && paid <= total;
   $("sale-paid-amount").setCustomValidity(valid ? "" : "El abono debe estar entre cero y el total, con hasta dos decimales.");
-  $("sale-paid-hint").textContent = "Total pagado por el cliente en " + currency + ". Sin separadores de miles. En blanco se usa el 30% habitual.";
+  $("sale-paid-hint").textContent = "Total pagado por el cliente en " + currency + ". Sin separadores de miles. En blanco se usa el 20% habitual.";
   $("sale-payment-preview").textContent = valid ? `Total: ${money(total, currency)} \xB7 Abonado: ${money(paid, currency)} \xB7 Pendiente: ${money(total - paid, currency)}` : "Revisa el monto abonado.";
 }
 $("sale-paid-amount").addEventListener("input", updateSalePayment);
