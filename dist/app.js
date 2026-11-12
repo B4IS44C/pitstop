@@ -15,12 +15,18 @@ function initPresence(call) {
   let ready = false, state = { status: "offline" }, busy = false, offset = 0, reg, timer, chain = Promise.resolve();
   const box = document.createElement("section");
   box.className = "presence-panel";
-  box.innerHTML = '<div><label for="seller-presence">Tu estado</label><select id="seller-presence" disabled><option value="offline">\u26AB Offline</option><option value="online">\u{1F7E2} Online</option><option value="lunch">\u{1F7E1} Almuerzo</option></select></div><div><p id="presence-note" role="status"></p><button type="button" id="presence-notifications">Activar notificaciones</button></div><div id="presence-confirm" hidden role="alert"><strong>Hola, \xBFa\xFAn te encuentras en l\xEDnea?</strong><p id="presence-countdown"></p><button type="button" id="presence-yes">S\xED, sigo en l\xEDnea</button></div>';
+  box.innerHTML = '<div><label for="seller-presence">Tu estado</label><select id="seller-presence" disabled><option value="offline">\u26AB Offline</option><option value="online">\u{1F7E2} Online</option><option value="lunch">\u{1F7E1} Almuerzo</option></select></div><div><p id="presence-lunch" hidden></p><p id="presence-note" role="status"></p><button type="button" id="presence-notifications">Activar notificaciones</button></div><div id="presence-confirm" hidden role="alert"><strong>Hola, \xBFa\xFAn te encuentras en l\xEDnea?</strong><p id="presence-countdown"></p><button type="button" id="presence-yes">S\xED, sigo en l\xEDnea</button></div>';
   document.querySelector(".seller-panel").after(box);
   function draw() {
     const now = Date.now() + offset, waiting = state.status === "online" && state.dueAt && now >= state.dueAt;
     const expired = waiting && now >= state.dueAt + 3e5;
     $2("seller-presence").value = expired ? "offline" : state.status;
+    const lunch = $2("presence-lunch");
+    lunch.hidden = state.status !== "lunch";
+    if (!lunch.hidden) {
+      const minutes = Math.max(0, Math.floor((now - state.since) / 6e4));
+      lunch.textContent = "Almuerzo: " + Math.floor(minutes / 60) + " h " + minutes % 60 + " min" + (minutes > 60 ? " \xB7 Exceso: " + (minutes - 60) + " min" : " \xB7 Disponible: 1 h");
+    }
     $2("presence-confirm").hidden = !waiting || expired;
     $2("presence-countdown").textContent = "Confirma para continuar en l\xEDnea.";
     if (expired) $2("presence-note").textContent = "Tu estado es Offline.";
