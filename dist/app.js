@@ -21,6 +21,7 @@ async function unlockCalculator(call, auth, sdk, { endpoint = "calculatorAccess"
   }
   let expires = 0, pending;
   const lock = () => {
+    document.querySelectorAll("dialog[open]").forEach((d) => d.close());
     document.documentElement.classList.add("calculator-locked");
     panel.hidden = false;
     password.focus();
