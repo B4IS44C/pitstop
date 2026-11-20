@@ -1,3 +1,92 @@
+// outputs/pitstop/dist/calculator-access-ui.js
+async function unlockCalculator(call, auth, sdk, { endpoint = "calculatorAccess", names } = {}) {
+  const panel = document.getElementById("calculator-login"), form = panel.querySelector("form"), password = panel.querySelector("input[type=password]"), remember = panel.querySelector("input[type=checkbox]"), error = panel.querySelector("[role=alert]"), button = panel.querySelector("button");
+  const actor = document.createElement("select");
+  actor.required = true;
+  actor.setAttribute("aria-label", "Tu nombre");
+  actor.append(new Option("Selecciona tu nombre", ""));
+  const label = document.createElement("label");
+  label.textContent = "Tu nombre";
+  label.append(actor);
+  password.parentNode.insertBefore(label, password.previousElementSibling);
+  try {
+    const people = names || (await call("ownerSellers")({ action: "list" })).data.names;
+    for (const name of people) actor.add(new Option(name, name));
+    try {
+      actor.value = localStorage.getItem(endpoint + "-actor") || "";
+    } catch {
+    }
+  } catch {
+    error.textContent = "No se pudo cargar el equipo. Recarga la p\xE1gina.";
+  }
+  let expires = 0, pending;
+  const lock = () => {
+    document.documentElement.classList.add("calculator-locked");
+    panel.hidden = false;
+    password.focus();
+  };
+  const accept = (data) => {
+    expires = Date.now() + data.expiresAt - data.serverNow;
+    panel.hidden = true;
+    document.documentElement.classList.remove("calculator-locked");
+  };
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (button.disabled) return;
+    button.disabled = true;
+    error.textContent = "";
+    try {
+      const { data } = await call(endpoint)({ action: "login", password: password.value, actor: actor.value });
+      await sdk.setPersistence(auth, remember.checked ? sdk.browserLocalPersistence : sdk.browserSessionPersistence);
+      try {
+        localStorage.setItem(endpoint + "-actor", actor.value);
+      } catch {
+      }
+      password.value = "";
+      accept(data);
+      pending?.();
+      pending = null;
+    } catch (e2) {
+      error.textContent = e2.code === "functions/permission-denied" ? "Contrase\xF1a incorrecta." : e2.code === "functions/resource-exhausted" ? "Demasiados intentos. Espera 15 minutos." : "No se pudo ingresar. Revisa tu conexi\xF3n e intenta nuevamente.";
+    } finally {
+      button.disabled = false;
+    }
+  });
+  const wait = () => new Promise((resolve) => {
+    pending = resolve;
+    lock();
+  });
+  try {
+    const { data } = await call(endpoint)({ action: "status" });
+    if (data.valid) accept(data);
+    else await wait();
+  } catch {
+    error.textContent = "No se pudo verificar el acceso. Ingresa nuevamente.";
+    await wait();
+  }
+  const check = () => {
+    if (Date.now() >= expires) lock();
+  };
+  setInterval(check, 15e3);
+  document.addEventListener("visibilitychange", check);
+  window.addEventListener("focus", check);
+  return async (name, data) => {
+    if (Date.now() >= expires) {
+      lock();
+      throw Error("Ingresa la contrase\xF1a de hoy.");
+    }
+    try {
+      return await call(name)(data);
+    } catch (e) {
+      if (e.code === "functions/permission-denied") {
+        const { data: status } = await call(endpoint)({ action: "status" });
+        if (!status.valid) lock();
+      }
+      throw e;
+    }
+  };
+}
+
 // outputs/pitstop/dist/presence-ui.js
 function initPresence(call) {
   const $2 = (id) => document.getElementById(id);
@@ -662,7 +751,7 @@ function initMultipleSale({ call, context = () => ({}), check = () => true, owne
     $2("[data-fields]").disabled = true;
     $2("[data-status]").textContent = "Guardando venta\u2026";
     try {
-      requestId2 ??= crypto.randomUUID();
+      requestId2 ?? (requestId2 = crypto.randomUUID());
       const payload = { ...context(), paidAmount: $2("[data-paid]").value.trim(), paymentCurrency: $2("[data-usd]").checked ? "USD" : "CRC", requestId: requestId2, items: [...selected.values()].map((r) => ({ id: r.id, quoteVersion: r.quoteVersion })), ...sale ? { saleId: sale.id, version: sale.version } : { customer: { phone, name: $2("[data-name]").value.trim(), address: $2("[data-address]").value.trim() }, receipt: await receiptFile($2("[data-receipt]").files[0]) } };
       const { data } = await call("saveMultipleSale", payload);
       documentData = { ...data.paymentDocument, trackingCode: data.trackingCode };
@@ -1427,10 +1516,12 @@ async function start() {
     const firebase = app.initializeApp(firebaseConfig);
     check.initializeAppCheck(firebase, { provider: new check.ReCaptchaEnterpriseProvider(appCheckSiteKey), isTokenAutoRefreshEnabled: true });
     const auth = authentication.getAuth(firebase);
-    await authentication.setPersistence(auth, authentication.browserSessionPersistence);
-    await authentication.signInAnonymously(auth);
+    await auth.authStateReady();
+    if (!auth.currentUser) await authentication.signInAnonymously(auth);
     const backend = functions.getFunctions(firebase, region);
-    api = (name) => functions.httpsCallable(backend, name);
+    const raw = (name) => functions.httpsCallable(backend, name);
+    const secured = await unlockCalculator(raw, auth, authentication);
+    api = (name) => (data) => secured(name, data);
     await loadSellers();
     await presence.prepare();
     $("fields").disabled = false;
@@ -1439,6 +1530,7 @@ async function start() {
     $("sales-search-button").disabled = false;
     notice("");
   } catch {
+    document.querySelector("#calculator-login [role=alert]").textContent = "No se pudo conectar. Recarga la p\xE1gina para intentar nuevamente.";
     notice("No se pudo conectar la calculadora. Revisa tu conexi\xF3n o int\xE9ntalo m\xE1s tarde.", true);
   }
 }
@@ -1596,7 +1688,7 @@ async function downloadPaymentPdf() {
   $("download-receipt-pdf").disabled = true;
   $("receipt-pdf-status").textContent = "Preparando comprobante PDF\u2026";
   try {
-    paymentPdfBlob ??= await paymentPdf2(lastPaymentDocument);
+    paymentPdfBlob ?? (paymentPdfBlob = await paymentPdf2(lastPaymentDocument));
     const url = URL.createObjectURL(paymentPdfBlob), link = document.createElement("a");
     link.href = url;
     link.download = "PitStop-" + lastPaymentDocument.number + ".pdf";
