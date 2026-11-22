@@ -105,12 +105,21 @@ function initPresence(call) {
   let ready = false, state = { status: "offline" }, busy = false, offset = 0, reg, timer, chain = Promise.resolve();
   const box = document.createElement("section");
   box.className = "presence-panel";
-  box.innerHTML = '<div><label for="seller-presence">Tu estado</label><select id="seller-presence" disabled><option value="offline">\u26AB Offline</option><option value="online">\u{1F7E2} Online</option><option value="lunch">\u{1F7E1} Almuerzo</option></select></div><div><p id="presence-lunch" hidden></p><p id="presence-note" role="status"></p><button type="button" id="presence-notifications">Activar notificaciones</button></div><div id="presence-confirm" hidden role="alert"><strong>Hola, \xBFa\xFAn te encuentras en l\xEDnea?</strong><p id="presence-countdown"></p><button type="button" id="presence-yes">S\xED, sigo en l\xEDnea</button></div>';
+  box.innerHTML = '<div><label for="seller-presence">Tu estado</label><div class="presence-select"><span class="presence-dot" aria-hidden="true"></span><select id="seller-presence" disabled><option value="offline">Offline</option><option value="online">Online</option><option value="lunch">Almuerzo</option></select></div></div><div><p id="presence-lunch" hidden></p><p id="presence-note" role="status"></p><button type="button" id="presence-notifications">Activar notificaciones</button></div><div id="presence-confirm" hidden role="alert"><strong>Hola, \xBFa\xFAn te encuentras en l\xEDnea?</strong><p id="presence-countdown"></p><button type="button" id="presence-yes">S\xED, sigo en l\xEDnea</button></div>';
   document.querySelector(".seller-panel").after(box);
+  box.dataset.status = "offline";
   function draw() {
     const now = Date.now() + offset, waiting = state.status === "online" && state.dueAt && now >= state.dueAt;
     const expired = waiting && now >= state.dueAt + 3e5;
-    $2("seller-presence").value = expired ? "offline" : state.status;
+    const next = expired ? "offline" : state.status;
+    $2("seller-presence").value = next;
+    if (box.dataset.status !== next) {
+      box.dataset.status = next;
+      if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        box.querySelector(".presence-dot").animate([{ transform: "scale(.5)" }, { transform: "scale(1.3)", offset: 0.55 }, { transform: "scale(1)" }], { duration: 320, easing: "ease-out" });
+        box.querySelector(".presence-select").animate([{ transform: "translateY(2px)", opacity: 0.7 }, { transform: "translateY(0)", opacity: 1 }], { duration: 220, easing: "ease-out" });
+      }
+    }
     const lunch = $2("presence-lunch");
     lunch.hidden = state.status !== "lunch";
     if (!lunch.hidden) {
