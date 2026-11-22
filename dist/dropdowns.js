@@ -1,10 +1,10 @@
 // Keep the original selects as the form and application state; enhance their presentation.
 const enhanced=new Map();let current=null,serial=0;
 function enhance(select){
- if(enhanced.has(select)||select.multiple||select.size>1)return;
+ if(select.id==='shipping-origin'||enhanced.has(select)||select.multiple||select.size>1)return;
  const wrap=document.createElement('div');wrap.className='pit-select';select.before(wrap);wrap.append(select);select.classList.add('pit-select-native');select.tabIndex=-1;select.setAttribute('aria-hidden','true');
  const trigger=document.createElement('button');trigger.type='button';trigger.className='pit-select-trigger';trigger.setAttribute('role','combobox');trigger.setAttribute('aria-haspopup','listbox');trigger.setAttribute('aria-expanded','false');
- const text=document.createElement('span'),chevron=document.createElement('span');chevron.className='pit-select-chevron';chevron.textContent='⌄';chevron.setAttribute('aria-hidden','true');trigger.append(text,chevron);wrap.append(trigger);
+ const text=document.createElement('span'),chevron=document.createElement('span');chevron.className='pit-select-chevron';chevron.innerHTML='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';chevron.setAttribute('aria-hidden','true');trigger.append(text,chevron);wrap.append(trigger);
  const menu=document.createElement('div');menu.className='pit-select-menu';menu.id='pit-options-'+(++serial);menu.setAttribute('role','listbox');menu.setAttribute('popover','manual');wrap.append(menu);trigger.setAttribute('aria-controls',menu.id);
  let open=false,active=-1,signature='',search='',searchAt=0;
  const available=()=>[...select.options].map((o,i)=>!o.disabled&&!o.hidden?i:-1).filter(i=>i>=0);
