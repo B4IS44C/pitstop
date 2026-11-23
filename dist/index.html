@@ -1,14 +1,14 @@
 <!doctype html>
 <html lang="es" class="calculator-locked">
 <head>
-  <meta charset="UTF-8"><script>try{document.documentElement.dataset.theme=localStorage.getItem("pitstop-theme")==="light"?"light":"dark";}catch{}</script><meta name="viewport" content="width=device-width, initial-scale=1,viewport-fit=cover">
+  <meta charset="UTF-8"><script>document.documentElement.dataset.theme="dark";try{if(!localStorage.getItem("pitstop-carbon-theme")){localStorage.setItem("pitstop-theme","dark");localStorage.setItem("pitstop-carbon-theme","1");}document.documentElement.dataset.theme=localStorage.getItem("pitstop-theme")==="light"?"light":"dark";}catch{}</script><meta name="viewport" content="width=device-width, initial-scale=1,viewport-fit=cover">
   <meta name="description" content="Calculadora privada de repuestos PitStop."><meta name="robots" content="noindex,nofollow">
   <title>PitStop | Calculadora de repuestos</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='8' fill='%23e20a18'/%3E%3Ctext x='10' y='29' font-family='Arial' font-size='28' font-weight='900' fill='white'%3EP%3C/text%3E%3C/svg%3E">
 
   <link rel="stylesheet" href="./currency.css?v=20261004-tracking">
 <link rel="stylesheet" href="./quotation-image.css?v=20261002"><link rel="stylesheet" href="./styles.css?v=20261108-vendedores"><link rel="stylesheet" href="./presence.css?v=20261109-presence"><link rel="stylesheet" href="./calculator-access.css?v=20261122-intro">
-<link rel="stylesheet" href="./admin-style.css?v=20261122-spacing"><link rel="stylesheet" href="./dropdowns.css?v=20261122-shipping"></head>
+<link rel="stylesheet" href="./admin-style.css?v=20261122-carbon"><link rel="stylesheet" href="./dropdowns.css?v=20261122-shipping"><link rel="stylesheet" href="./carbon.css?v=20261122-carbon"></head>
 <body><section id="calculator-login" aria-label="Acceso de vendedores"><form><div class="login-brand">PITSTOP REPUESTOS</div><h1>Bienvenido al equipo.</h1><p>Ingresa tu contraseña para abrir la calculadora.</p><label for="calculator-password">Contraseña</label><input id="calculator-password" type="password" autocomplete="current-password" required maxlength="128"><label class="login-remember"><input type="checkbox" checked>Recordar acceso por hoy</label><button type="submit">Ingresar</button><p role="alert" aria-live="polite"></p></form></section>
  <header class="header"><div class="header-inner"><a href="./" aria-label="PitStop inicio" class="brand"><img src="./assets/logo.jpeg" alt="PitStop Repuestos" width="112" height="112"><span>HERRAMIENTAS<br><strong>DE COTIZACIÓN</strong></span></a><div class="header-tools"><span class="private">CALCULADORA DE REPUESTOS</span><button id="theme-toggle" type="button" aria-pressed="false">☾ Modo oscuro</button></div></div></header>
  <main>
