@@ -19,3 +19,7 @@ html[data-theme] main{padding-bottom:40px}
 @media(max-width:760px){.page-heading{padding:10px 0 22px}.page-heading::after{right:14px;top:12px;height:34px;width:5px;opacity:.35}.page-heading h1{font-size:32px;max-width:290px}.result .total{font-size:36px}.result #result-product{font-size:15px}.calculator,.result{padding:22px}.result .exchange{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 html[data-theme] .result .exchange .input-unit{background:var(--input);border-color:var(--line)}html[data-theme] .result .exchange input{color:var(--ink)}html[data-theme] main :is(.notice,.multiple-intro p,.multi-sale-banner p){color:var(--subtle)}
+/* Match the administrator KPI figures. */
+.result .total{font-family:Inter,Arial,sans-serif;font-weight:700;font-size:clamp(28px,2.8vw,38px);letter-spacing:-.045em;line-height:1.3;font-variant-numeric:tabular-nums}
+.result dd{font-family:Inter,Arial,sans-serif;font-weight:500}
+@media(max-width:760px){.result .total{font-size:32px}}
