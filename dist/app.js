@@ -1166,23 +1166,6 @@ function costaRicaPhone(value) {
   if (!/^\+?506\d{8}$/.test(phone)) throw new Error("Revisa el tel\xE9fono del cliente. Debe tener +506 y 8 d\xEDgitos.");
   return phone.replace(/^\+/, "");
 }
-function whatsappQuotation(item) {
-  const phone = costaRicaPhone(item?.customerPhone), total = item?.paymentCurrency === "USD" ? item?.totalCents : item?.totalCrcMinor;
-  if (!Number.isSafeInteger(total) || total <= 0) throw new Error("Calcula la cotizaci\xF3n en colones antes de enviarla.");
-  const product = String(item.product || "").trim().replace(/\s+/g, " ");
-  if (!product) throw new Error("Falta el nombre del repuesto. Calcula nuevamente.");
-  const advance = depositMinor(total, item.paymentCurrency || "CRC"), balance = total - advance;
-  const crc = (minor) => item.paymentCurrency === "USD" ? "US$ " + new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(minor / 100) : "\u20A1" + new Intl.NumberFormat("es-CR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(minor / 100);
-  const message = `Perfecto, excelente. \u{1F44D}\u{1F3FB} Ya confirmamos que el repuesto es el correcto y podemos solicitarlo por encargo como pedido especial.
-
-El precio del repuesto (${product}) ser\xEDa de ${crc(total)} y para realizar el pedido se requiere un adelanto del 20% ${crc(advance)}. El restante ${crc(balance)} se cancela al momento de la entrega personal.
-
-\u23F1\uFE0F Tiempo estimado de llegada: 12\u201315 d\xEDas
-\u{1F6E1}\uFE0F Garant\xEDa: 1 mes
-
-Una vez realizado el adelanto, procedemos a encargarlo. \xA1Muchas gracias por la confianza!`;
-  return { phone, message, total, advance, balance, url: `https://wa.me/${phone}?text=${encodeURIComponent(message)}` };
-}
 
 // outputs/pitstop/dist/config.js
 var firebaseConfig = {
@@ -1253,36 +1236,6 @@ $("quote-phone").addEventListener("blur", () => {
   try {
     $("quote-phone").value = "+" + costaRicaPhone($("quote-phone").value);
   } catch {
-  }
-});
-var copyBusy = false;
-$("send-whatsapp").addEventListener("click", async () => {
-  if (!lastResult || quoteBusy || saleBusy || copyBusy || !checkSeller()) return;
-  let message;
-  try {
-    message = whatsappQuotation({ ...lastResult, paymentCurrency: $("quote-paid-usd").checked ? "USD" : "CRC" }).message;
-  } catch (error) {
-    $("whatsapp-status").textContent = error.message;
-    return;
-  }
-  const snapshot = lastResult;
-  copyBusy = true;
-  $("send-whatsapp").disabled = true;
-  $("copy-message").hidden = true;
-  try {
-    await copyMessage(message);
-    if (lastResult === snapshot) $("whatsapp-status").textContent = "Mensaje copiado. Ya puedes pegarlo en WhatsApp.";
-  } catch {
-    if (lastResult === snapshot) {
-      $("copy-message").value = message;
-      $("copy-message").hidden = false;
-      $("copy-message").focus();
-      $("copy-message").select();
-      $("whatsapp-status").textContent = "El navegador no permiti\xF3 copiar. Copia el texto seleccionado con Ctrl+C o mant\xE9n presionado y elige Copiar.";
-    }
-  } finally {
-    copyBusy = false;
-    $("send-whatsapp").disabled = quoteBusy;
   }
 });
 $("create-sale").addEventListener("click", () => {
@@ -1374,9 +1327,6 @@ function currencyChanged() {
 $("currency").addEventListener("change", currencyChanged);
 function renderResult(item) {
   lastResult = item;
-  $("copy-message").hidden = true;
-  $("copy-message").value = "";
-  $("whatsapp-status").textContent = "Copia el texto para pegarlo en WhatsApp.";
   $("discount").value = String(item.discountPercent ?? 0);
   $("result-empty").hidden = true;
   $("result-data").hidden = false;
@@ -1416,7 +1366,7 @@ $("discount").addEventListener("change", async () => {
   if (!checkSeller()) return;
   const snapshot = lastResult, discountPercent = Number($("discount").value);
   quoteBusy = true;
-  for (const id of ["discount", "seller", "fields", "exchange-rate", "new", "create-sale", "send-whatsapp", "quotation-image"]) $(id).disabled = true;
+  for (const id of ["discount", "seller", "fields", "exchange-rate", "new", "create-sale", "quotation-image"]) $(id).disabled = true;
   renderSearch();
   notice("Aplicando descuento\u2026");
   try {
@@ -1429,7 +1379,7 @@ $("discount").addEventListener("change", async () => {
     notice(error.code === "functions/failed-precondition" ? "Esta cotizaci\xF3n ya tiene una venta." : error.code === "functions/aborted" ? "La cotizaci\xF3n cambi\xF3. B\xFAscala y recup\xE9rala nuevamente." : "No se confirm\xF3 el descuento. Busca y recupera la cotizaci\xF3n antes de continuar.", true);
   } finally {
     quoteBusy = false;
-    for (const id of ["discount", "seller", "fields", "exchange-rate", "new", "create-sale", "send-whatsapp", "quotation-image"]) $(id).disabled = false;
+    for (const id of ["discount", "seller", "fields", "exchange-rate", "new", "create-sale", "quotation-image"]) $(id).disabled = false;
     renderSearch();
   }
 });
@@ -1651,7 +1601,7 @@ $("quotation-image").addEventListener("click", async () => {
   }
   const snapshot = lastResult;
   quoteBusy = true;
-  const locked = ["quote-paid-usd", "image-arrival", "image-warranty", "quotation-image", "discount", "seller", "fields", "exchange-rate", "new", "create-sale", "send-whatsapp"];
+  const locked = ["quote-paid-usd", "image-arrival", "image-warranty", "quotation-image", "discount", "seller", "fields", "exchange-rate", "new", "create-sale"];
   for (const id of locked) $(id).disabled = true;
   renderSearch();
   $("image-status").textContent = "Preparando cotizaci\xF3n\u2026";
@@ -1758,8 +1708,6 @@ var openMultiple = initMultipleSale({ call: (name, data) => api(name)(data), con
 $("open-multiple-sale").addEventListener("click", () => openMultiple());
 $("quote-paid-usd").addEventListener("change", () => {
   closeImage();
-  $("copy-message").hidden = true;
-  $("whatsapp-status").textContent = $("quote-paid-usd").checked ? "Cotizaci\xF3n en d\xF3lares \xB7 USD" : "Cotizaci\xF3n en colones \xB7 CRC";
 });
 function updateSalePayment() {
   if (!lastResult) return;
