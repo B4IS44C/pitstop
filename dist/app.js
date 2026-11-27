@@ -3,7 +3,7 @@ function initSellerEarnings(call) {
   const card = document.createElement("section");
   card.className = "seller-earnings";
   card.setAttribute("aria-labelledby", "earnings-title");
-  card.innerHTML = '<div class="earnings-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m4 16 6-6 4 4 6-9m-6 0h6v6"/></svg></div><div class="earnings-main"><p id="earnings-title">Ganancias en comisiones</p><strong id="earnings-total">\u2014</strong><span id="earnings-caption">Consultando tus comisiones\u2026</span></div><div class="earnings-aside"><span class="earnings-rate">5% por venta</span><p id="earnings-motivation">Cada venta suma.</p><button type="button" id="earnings-refresh" aria-label="Actualizar ganancias en comisiones">Actualizar <span aria-hidden="true">\u21BB</span></button></div><p id="earnings-status" role="status" aria-live="polite"></p>';
+  card.innerHTML = '<div class="earnings-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m4 16 6-6 4 4 6-9m-6 0h6v6"/></svg></div><div class="earnings-main"><p id="earnings-title">Ganancias en comisiones</p><strong id="earnings-total">\u2014</strong><span id="earnings-caption">Consultando tus comisiones\u2026</span></div><div class="earnings-aside"><p id="earnings-motivation">Cada venta suma.</p><button type="button" id="earnings-refresh" aria-label="Actualizar ganancias en comisiones">Actualizar <span aria-hidden="true">\u21BB</span></button></div><p id="earnings-status" role="status" aria-live="polite"></p>';
   document.querySelector("main").prepend(card);
   const $2 = (id) => card.querySelector("#" + id);
   let busy = false, started = false, last = 0, previous = null;
@@ -14,7 +14,7 @@ function initSellerEarnings(call) {
     try {
       const { data } = await call("sellerCommissions", {});
       $2("earnings-total").textContent = new Intl.NumberFormat("es-CR", { style: "currency", currency: "CRC", maximumFractionDigits: 2 }).format(data.commissionMinor / 100);
-      $2("earnings-caption").textContent = data.seller + " \xB7 " + data.count + " " + (data.count === 1 ? "venta pendiente de pago de comisi\xF3n" : "ventas pendientes de pago de comisi\xF3n");
+      $2("earnings-caption").textContent = data.seller;
       $2("earnings-motivation").textContent = data.count ? "\xA1Tu esfuerzo sigue sumando!" : "Tu pr\xF3xima venta comienza aqu\xED.";
       $2("earnings-status").textContent = data.missing ? "Hay " + data.missing + " ventas sin un total v\xE1lido. Solicita su revisi\xF3n al administrador; no est\xE1n incluidas en este monto." : "";
       card.dataset.incomplete = String(data.missing > 0);
