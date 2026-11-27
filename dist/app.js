@@ -1,3 +1,49 @@
+// outputs/pitstop/dist/seller-earnings.js
+function initSellerEarnings(call) {
+  const card = document.createElement("section");
+  card.className = "seller-earnings";
+  card.setAttribute("aria-labelledby", "earnings-title");
+  card.innerHTML = '<div class="earnings-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m4 16 6-6 4 4 6-9m-6 0h6v6"/></svg></div><div class="earnings-main"><p id="earnings-title">Ganancias en comisiones</p><strong id="earnings-total">\u2014</strong><span id="earnings-caption">Consultando tus comisiones\u2026</span></div><div class="earnings-aside"><span class="earnings-rate">5% por venta</span><p id="earnings-motivation">Cada venta suma.</p><button type="button" id="earnings-refresh" aria-label="Actualizar ganancias en comisiones">Actualizar <span aria-hidden="true">\u21BB</span></button></div><p id="earnings-status" role="status" aria-live="polite"></p>';
+  document.querySelector("main").prepend(card);
+  const $2 = (id) => card.querySelector("#" + id);
+  let busy = false, started = false, last = 0, previous = null;
+  async function refresh() {
+    if (!started || busy || document.hidden || document.documentElement.classList.contains("calculator-locked")) return;
+    busy = true;
+    $2("earnings-refresh").disabled = true;
+    try {
+      const { data } = await call("sellerCommissions", {});
+      $2("earnings-total").textContent = new Intl.NumberFormat("es-CR", { style: "currency", currency: "CRC", maximumFractionDigits: 2 }).format(data.commissionMinor / 100);
+      $2("earnings-caption").textContent = data.seller + " \xB7 " + data.count + " " + (data.count === 1 ? "venta pendiente de pago de comisi\xF3n" : "ventas pendientes de pago de comisi\xF3n");
+      $2("earnings-motivation").textContent = data.count ? "\xA1Tu esfuerzo sigue sumando!" : "Tu pr\xF3xima venta comienza aqu\xED.";
+      $2("earnings-status").textContent = data.missing ? "Hay " + data.missing + " ventas sin un total v\xE1lido. Solicita su revisi\xF3n al administrador; no est\xE1n incluidas en este monto." : "";
+      card.dataset.incomplete = String(data.missing > 0);
+      if (previous !== null && previous !== data.commissionMinor && !matchMedia("(prefers-reduced-motion: reduce)").matches) $2("earnings-total").animate([{ opacity: 0.4, transform: "translateY(4px)" }, { opacity: 1, transform: "translateY(0)" }], { duration: 300 });
+      previous = data.commissionMinor;
+      last = Date.now();
+    } catch {
+      $2("earnings-status").textContent = "No se pudo actualizar. Intenta nuevamente.";
+      if (previous !== null) $2("earnings-status").textContent += " El monto mostrado corresponde a la \xFAltima consulta.";
+    } finally {
+      busy = false;
+      $2("earnings-refresh").disabled = false;
+    }
+  }
+  $2("earnings-refresh").onclick = refresh;
+  document.addEventListener("pitstop:sale-saved", refresh);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && Date.now() - last > 15e3) refresh();
+  });
+  window.addEventListener("focus", () => {
+    if (Date.now() - last > 15e3) refresh();
+  });
+  setInterval(refresh, 6e4);
+  return { start() {
+    started = true;
+    refresh();
+  } };
+}
+
 // outputs/pitstop/dist/calculator-access-ui.js
 async function unlockCalculator(call, auth, sdk, { endpoint = "calculatorAccess", names } = {}) {
   const panel = document.getElementById("calculator-login"), form = panel.querySelector("form"), password = panel.querySelector("input[type=password]"), remember = panel.querySelector("input[type=checkbox]"), error = panel.querySelector("[role=alert]"), button = panel.querySelector("button");
@@ -1187,6 +1233,7 @@ var lastResult;
 var sellerDay;
 var saleBusy = false;
 var today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Costa_Rica", year: "numeric", month: "2-digit", day: "2-digit" }).format(/* @__PURE__ */ new Date());
+var earnings = initSellerEarnings((name, data) => api(name)(data));
 var presence = initPresence((name, data) => api(name)(data));
 var sellers = [];
 async function loadSellers() {
@@ -1481,8 +1528,13 @@ async function start() {
     const backend = functions.getFunctions(firebase, region);
     const raw = (name) => functions.httpsCallable(backend, name);
     const secured = await unlockCalculator(raw, auth, authentication);
-    api = (name) => (data) => secured(name, data);
+    api = (name) => async (data) => {
+      const result = await secured(name, data);
+      if (["createSale", "saveMultipleSale"].includes(name)) document.dispatchEvent(new Event("pitstop:sale-saved"));
+      return result;
+    };
     await loadSellers();
+    earnings.start();
     await presence.prepare();
     $("fields").disabled = false;
     $("calculate").disabled = false;
